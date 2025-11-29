@@ -1,0 +1,75 @@
+═══════════════════════════════════════════════════════════════
+  QUICK START GUIDE - Running TOMECO Servers in CMD
+═══════════════════════════════════════════════════════════════
+
+METHOD 1: Using Batch Files (EASIEST)
+═══════════════════════════════════════════════════════════════
+
+Step 1: Open Command Prompt
+   - Press Windows Key + R
+   - Type: cmd
+   - Press Enter
+
+Step 2: Navigate to Project Folder
+   cd C:\Users\Charles Rosete\Capstone_Gigs\tomeco_web
+
+Step 3: Run Admin Server (First Terminal)
+   start-admin-server.bat
+   
+   ✓ Admin Portal will start at: http://localhost:8000
+
+Step 4: Run Violator Server (Second Terminal)
+   - Open a NEW Command Prompt window
+   - Navigate again: cd C:\Users\Charles Rosete\Capstone_Gigs\tomeco_web
+   - Run: start-violator-server.bat
+   
+   ✓ Violator Portal will start at: http://localhost:8001
+
+
+METHOD 2: Manual Commands
+═══════════════════════════════════════════════════════════════
+
+TERMINAL 1 - Admin Server:
+───────────────────────────────────────────────────────────────
+cd C:\Users\Charles Rosete\Capstone_Gigs\tomeco_web
+set APP_PORTAL_TYPE=admin
+php artisan serve --port=8000
+
+TERMINAL 2 - Violator Server:
+───────────────────────────────────────────────────────────────
+cd C:\Users\Charles Rosete\Capstone_Gigs\tomeco_web
+set APP_PORTAL_TYPE=violator
+php artisan serve --port=8001
+
+
+WHAT YOU'LL SEE:
+═══════════════════════════════════════════════════════════════
+
+Admin Server Output:
+  Starting TOMECO Admin Portal Server...
+  Portal Type: ADMIN
+  Server will be available at: http://localhost:8000
+  INFO  Server running on [http://127.0.0.1:8000].
+
+Violator Server Output:
+  Starting TOMECO Violator Portal Server...
+  Portal Type: VIOLATOR
+  Server will be available at: http://localhost:8001
+  INFO  Server running on [http://127.0.0.1:8001].
+
+
+ACCESS THE PORTALS:
+═══════════════════════════════════════════════════════════════
+
+Admin Portal:    http://localhost:8000
+Violator Portal: http://localhost:8001
+
+
+STOP SERVERS:
+═══════════════════════════════════════════════════════════════
+
+Press Ctrl + C in each Command Prompt window
+
+
+═══════════════════════════════════════════════════════════════
+
