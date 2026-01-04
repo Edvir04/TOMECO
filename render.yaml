@@ -23,13 +23,14 @@ services:
         sync: false
       - key: DB_SSL
         value: "true"
-      - key: PYTHON_OCR_HOST
-        fromService:
-          type: web
-          name: tomeco-ocr
-          property: host
-      - key: PYTHON_OCR_PORT
-        value: 5000
+      # OCR service temporarily disabled
+      # - key: PYTHON_OCR_HOST
+      #   fromService:
+      #     type: web
+      #     name: tomeco-ocr
+      #     property: host
+      # - key: PYTHON_OCR_PORT
+      #   value: 5000
 
   # Laravel Admin Portal (Port 8000)
   - type: web
@@ -104,16 +105,16 @@ services:
           name: tomeco-web-violator
           property: host
 
-  # Python OCR Service (Port 5000)
-  - type: web
-    name: tomeco-ocr
-    env: docker
-    plan: free
-    dockerfilePath: ./Dockerfile.ocr
-    dockerContext: .
-    envVars:
-      - key: PORT
-        value: 5000
+  # Python OCR Service (Port 5000) - Temporarily disabled
+  # - type: web
+  #   name: tomeco-ocr
+  #   env: docker
+  #   plan: free
+  #   dockerfilePath: ./Dockerfile.ocr
+  #   dockerContext: .
+  #   envVars:
+  #     - key: PORT
+  #       value: 5000
 
 databases:
   - name: tomeco-db
