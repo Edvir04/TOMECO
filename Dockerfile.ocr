@@ -1,0 +1,38 @@
+# Dockerfile for Python OCR Service
+FROM python:3.11-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    libgl1-mesa-glx \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements first for better caching
+COPY Tc_ID_Card_OCR-main/Tc_ID_Card_OCR-main/requirements_api.txt .
+
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements_api.txt
+
+# Copy application code
+COPY Tc_ID_Card_OCR-main/Tc_ID_Card_OCR-main/ .
+
+# Expose port
+EXPOSE 5000
+
+# Set environment variables
+ENV FLASK_APP=ocr_api.py
+ENV FLASK_ENV=production
+ENV PORT=5000
+
+# Run the application
+CMD python -c "import os; from ocr_api import app; app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))"
+

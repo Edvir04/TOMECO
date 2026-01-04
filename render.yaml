@@ -34,9 +34,10 @@ services:
   # Laravel Admin Portal (Port 8000)
   - type: web
     name: tomeco-web-admin
+    env: docker
     plan: free
-    buildCommand: cd tomeco_web && composer install --no-dev --optimize-autoloader && php artisan config:cache && php artisan route:cache && php artisan view:cache
-    startCommand: cd tomeco_web && php artisan serve --host=0.0.0.0 --port=$PORT
+    dockerfilePath: ./tomeco_web/Dockerfile.admin
+    dockerContext: ./tomeco_web
     envVars:
       - key: APP_ENV
         value: production
@@ -72,9 +73,10 @@ services:
   # Laravel Violator Portal (Port 8001)
   - type: web
     name: tomeco-web-violator
+    env: docker
     plan: free
-    buildCommand: cd tomeco_web && composer install --no-dev --optimize-autoloader && php artisan config:cache && php artisan route:cache && php artisan view:cache
-    startCommand: cd tomeco_web && php artisan serve --host=0.0.0.0 --port=$PORT
+    dockerfilePath: ./tomeco_web/Dockerfile.violator
+    dockerContext: ./tomeco_web
     envVars:
       - key: APP_ENV
         value: production
@@ -105,10 +107,10 @@ services:
   # Python OCR Service (Port 5000)
   - type: web
     name: tomeco-ocr
-    env: python
+    env: docker
     plan: free
-    buildCommand: cd Tc_ID_Card_OCR-main/Tc_ID_Card_OCR-main && pip install -r requirements_api.txt
-    startCommand: cd Tc_ID_Card_OCR-main/Tc_ID_Card_OCR-main && python ocr_api.py
+    dockerfilePath: ./Dockerfile.ocr
+    dockerContext: .
     envVars:
       - key: PORT
         value: 5000
