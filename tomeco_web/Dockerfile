@@ -30,6 +30,13 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy composer files first for better caching
 COPY composer.json composer.lock ./
 
+# Create minimal .env file before composer install (required for Laravel's post-autoload scripts)
+RUN echo "APP_NAME=Laravel" > .env && \
+    echo "APP_ENV=production" >> .env && \
+    echo "APP_KEY=" >> .env && \
+    echo "APP_DEBUG=false" >> .env && \
+    echo "APP_URL=http://localhost" >> .env
+
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
