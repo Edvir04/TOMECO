@@ -110,7 +110,7 @@ services:
     env: python
     plan: free
     buildCommand: cd Tc_ID_Card_OCR-main/Tc_ID_Card_OCR-main && pip install -r requirements_api.txt
-    startCommand: cd Tc_ID_Card_OCR-main/Tc_ID_Card_OCR-main && python -c "import os; from ocr_api import app; app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))"
+    startCommand: cd Tc_ID_Card_OCR-main/Tc_ID_Card_OCR-main && python ocr_api.py
     envVars:
       - key: PORT
         value: 5000
