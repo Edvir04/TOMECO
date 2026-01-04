@@ -34,7 +34,6 @@ services:
   # Laravel Admin Portal (Port 8000)
   - type: web
     name: tomeco-web-admin
-    env: php
     plan: free
     buildCommand: cd tomeco_web && composer install --no-dev --optimize-autoloader && php artisan config:cache && php artisan route:cache && php artisan view:cache
     startCommand: cd tomeco_web && php artisan serve --host=0.0.0.0 --port=$PORT
@@ -73,7 +72,6 @@ services:
   # Laravel Violator Portal (Port 8001)
   - type: web
     name: tomeco-web-violator
-    env: php
     plan: free
     buildCommand: cd tomeco_web && composer install --no-dev --optimize-autoloader && php artisan config:cache && php artisan route:cache && php artisan view:cache
     startCommand: cd tomeco_web && php artisan serve --host=0.0.0.0 --port=$PORT
