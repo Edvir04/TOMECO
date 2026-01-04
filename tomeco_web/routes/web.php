@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\PublicRegistrationController;
 
 /*
@@ -28,8 +29,20 @@ if ($portalType === 'violator') {
     });
     
 } else {
-    // Admin Server Instance - Show welcome page or redirect to admin login
-    Route::view('/', 'welcome')->name('welcome');
+    // Admin Server Instance - Show welcome page (auto-logout if already logged in)
+    Route::get('/', function () {
+        // Automatically logout if user is logged in when visiting welcome page
+        if (Auth::guard('superadmin')->check() || Auth::guard('admin')->check()) {
+            foreach (['superadmin','admin'] as $guard) {
+                if (Auth::guard($guard)->check()) {
+                    Auth::guard($guard)->logout();
+                }
+            }
+            request()->session()->invalidate();
+            request()->session()->regenerateToken();
+        }
+        return view('welcome');
+    })->name('welcome');
     
     // Public Registration (for creating admin accounts - consider restricting in production)
     Route::get('/open-register', [PublicRegistrationController::class, 'form'])->name('open.register');

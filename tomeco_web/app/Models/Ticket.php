@@ -51,6 +51,15 @@ class Ticket extends Model
         'accident',
         'admitted_or_protest',
         'driver_signature',
+        'status',
+        'price',
+        'court_action_status',
+        'unpaid_violation_count',
+        'dss_penalty_level',
+        'dss_penalty_applied_at',
+        'dss_sms_sent',
+        'dss_penalty_fine_increase',
+        'dss_notes',
     ];
 
     /**
@@ -64,5 +73,11 @@ class Ticket extends Model
         'issued_date' => 'date',
         'court_date' => 'date',
         'accident' => 'boolean',
+        'price' => 'decimal:2', // Cast price as decimal with 2 decimal places
+        'is_archived' => 'boolean',
+        'paid_at' => 'datetime',
+        'dss_penalty_applied_at' => 'datetime',
+        'dss_sms_sent' => 'boolean',
+        'dss_penalty_fine_increase' => 'decimal:2',
     ];
 }

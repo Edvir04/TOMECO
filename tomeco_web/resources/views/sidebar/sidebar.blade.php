@@ -8,8 +8,12 @@
         <ul>
             <li><a href="{{ route('admin.dashboard') }}" class="{{ request()->routeIs('admin.dashboard') ? 'active' : '' }}">Dashboard</a></li>
             <li><a href="{{ route('admin.ticket-issuance') }}" class="{{ request()->routeIs('admin.ticket-issuance') ? 'active' : '' }}">Ticket Issuance</a></li>
+            @if(auth('superadmin')->check())
+                <li><a href="{{ route('admin.violations') }}" class="{{ request()->routeIs('admin.violations') ? 'active' : '' }}">Violations</a></li>
+                <li><a href="{{ route('admin.penalty') }}" class="{{ request()->routeIs('admin.penalty') ? 'active' : '' }}">Penalty Recommendation</a></li>
+            @endif
             <li><a href="{{ route('admin.accounts') }}" class="{{ request()->routeIs('admin.accounts') ? 'active' : '' }}">Accounts</a></li>
-            <li><a href="{{ route('admin.settings') }}" class="{{ request()->routeIs('admin.settings') ? 'active' : '' }}">Settings</a></li>
+            <li><a href="{{ route('admin.settings') }}" class="{{ request()->routeIs('admin.settings') ? 'active' : '' }}">Profile</a></li>
         </ul>
     </nav>
 

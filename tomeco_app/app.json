@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "TOMECO",
+    "slug": "tomeco-app",
+    "version": "1.0.1",
+    "orientation": "portrait",
+    "icon": "./assets/Tomeco_Square.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "updates": {
+      "enabled": false,
+      "fallbackToCacheTimeout": 0
+    },
+    "splash": {
+      "image": "./assets/Tomeco.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFFFFF"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/Tomeco.png",
+        "backgroundColor": "#FFFFFF"
+      },
+      "edgeToEdgeEnabled": true,
+      "usesCleartextTraffic": false,
+      "package": "com.babifran.tomeco_app",
+      "permissions": [
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "CAMERA"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "0367f0df-79fd-4378-8c95-ea3065899395"
+      }
+    },
+    "owner": "babifran"
+  }
+}

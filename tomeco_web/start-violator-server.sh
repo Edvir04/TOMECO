@@ -9,6 +9,6 @@ echo "Server will be available at: http://localhost:8001"
 # Set environment variable for violator portal
 export APP_PORTAL_TYPE=violator
 
-# Start Laravel development server
-php artisan serve --port=8001 --host=127.0.0.1
+# Start Laravel development server (bind to all interfaces for mobile access)
+php artisan serve --port=8001 --host=0.0.0.0
 

@@ -1,6 +1,12 @@
 <header class="navbar {{ !empty($withSidebar) ? 'navbar--with-sidebar' : '' }}">
   <div class="navbar-container">
-    @if (request()->routeIs('admin.login') || request()->routeIs('login') || request()->routeIs('welcome'))
+    @php $isPrivileged = auth('superadmin')->check() || auth('admin')->check(); @endphp
+
+    @if ($isPrivileged)
+      <div class="nav-left nav-left--stacked">
+        <span class="navbar-org">Traffic Operation Management Enforcement and Control Office</span>
+      </div>
+    @elseif (request()->routeIs('admin.login') || request()->routeIs('login') || request()->routeIs('welcome'))
       <a href="{{ route('welcome') }}" class="nav-left">
         <img src="{{ asset('assets/Logo.png') }}" alt="TOMECO Logo" class="navbar-logo">
         <span class="navbar-title">TOMECO</span>
@@ -59,8 +65,16 @@
   padding:0 16px; width:100%;
 }
 .nav-left { display:flex; align-items:center; gap:12px; text-decoration:none; }
+.nav-left--stacked{ flex-direction:column; align-items:flex-start; gap:4px; }
 .navbar-logo{ height:40px; width:auto; object-fit:contain; }
 .navbar-title{ font-size:1.25rem; font-weight:800; color:#fff; }
+.navbar-org{
+  font-size:0.9rem;
+  font-weight:700;
+  color:#fff;
+  text-transform:uppercase;
+  letter-spacing:0.25px;
+}
 .navbar-page{ font-size:1.125rem; font-weight:700; color:#fff; }
 
 </style>

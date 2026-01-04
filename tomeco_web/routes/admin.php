@@ -5,6 +5,8 @@ use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\TicketController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ViolationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,7 +25,14 @@ Route::post('/admin/login', [LoginController::class, 'login'])->name('admin.logi
 // Admin Protected Routes (require authentication)
 Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(function () {
     // Dashboard
-    Route::view('/dashboard', 'layout.dashboard')->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/dashboard/tickets', [DashboardController::class, 'getTickets'])->name('dashboard.tickets');
+    Route::get('/dashboard/users', [DashboardController::class, 'getUsers'])->name('dashboard.users');
+    Route::get('/dashboard/pending-tickets', [DashboardController::class, 'getPendingTickets'])->name('dashboard.pending-tickets');
+    Route::get('/dashboard/period-reports', [DashboardController::class, 'getPeriodReports'])->name('dashboard.period-reports');
+    Route::get('/dashboard/violations-statistics', [DashboardController::class, 'getViolationsStatistics'])->name('dashboard.violations-statistics');
+    Route::get('/dashboard/enforcer-statistics', [DashboardController::class, 'getEnforcerStatistics'])->name('dashboard.enforcer-statistics');
+    Route::get('/dashboard/violator-statistics', [DashboardController::class, 'getViolatorStatistics'])->name('dashboard.violator-statistics');
     
     // Settings
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
@@ -44,9 +53,24 @@ Route::middleware(['admin.auth'])->prefix('admin')->name('admin.')->group(functi
     Route::get('/tickets/{id}', [TicketController::class, 'show'])->name('tickets.show');
     Route::get('/tickets/{id}/print', [TicketController::class, 'print'])->name('tickets.print');
     Route::put('/tickets/{id}', [TicketController::class, 'update'])->name('tickets.update');
+    Route::post('/tickets/{id}/update-court-action-status', [TicketController::class, 'updateCourtActionStatus'])->name('tickets.update-court-action-status');
+    Route::post('/tickets/{id}/archive', [TicketController::class, 'archive'])->name('tickets.archive');
+    Route::post('/tickets/{id}/unarchive', [TicketController::class, 'unarchive'])->name('tickets.unarchive');
+    Route::post('/tickets/auto-archive', [TicketController::class, 'autoArchiveTickets'])->name('tickets.auto-archive');
     Route::delete('/tickets/{id}', [TicketController::class, 'destroy'])->name('tickets.destroy');
+    
+    // Violations Management
+    Route::get('/violations', [ViolationController::class, 'index'])->name('violations');
+    Route::post('/violations', [ViolationController::class, 'store'])->name('violations.store');
+    Route::get('/violations/{id}', [ViolationController::class, 'show'])->name('violations.show');
+    Route::put('/violations/{id}', [ViolationController::class, 'update'])->name('violations.update');
+    Route::delete('/violations/{id}', [ViolationController::class, 'destroy'])->name('violations.destroy');
+    
+    // Penalty Recommendation (DSS)
+    Route::get('/penalty', [TicketController::class, 'penaltyRecommendation'])->name('penalty');
 });
 
 // Admin Logout
 Route::post('/admin/logout', [LoginController::class, 'logout'])->name('admin.logout');
+Route::get('/admin/logout-auto', [LoginController::class, 'logout'])->name('admin.logout.auto');
 

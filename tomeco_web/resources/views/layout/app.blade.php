@@ -1,6 +1,7 @@
 @php
-  $withSidebar = auth('admin')->check() || auth('superadmin')->check();
   $isAuthRoute = request()->routeIs('login') || request()->routeIs('admin.login');
+  // Only show sidebar if authenticated AND not on login page
+  $withSidebar = !$isAuthRoute && (auth('admin')->check() || auth('superadmin')->check());
   $isWelcome   = request()->routeIs('welcome');
   $bodyClass = $__env->yieldContent('body-class');
 @endphp
@@ -98,5 +99,53 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
   @stack('scripts')
+  
+  @if($withSidebar)
+  <script>
+    // Handle session timeout and auto-logout on tab close
+    let lastActivity = Date.now();
+    const SESSION_LIFETIME_MINUTES = {{ config('session.lifetime', 120) }};
+    const SESSION_TIMEOUT_MS = SESSION_LIFETIME_MINUTES * 60 * 1000; // Convert minutes to milliseconds
+    
+    // Track user activity to reset timeout
+    ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
+      document.addEventListener(event, () => {
+        lastActivity = Date.now();
+      }, true);
+    });
+    
+    // Check session validity periodically (every 30 seconds)
+    setInterval(function() {
+      const timeSinceActivity = Date.now() - lastActivity;
+      // Check if session should have expired (with 1 minute buffer)
+      if (timeSinceActivity > (SESSION_TIMEOUT_MS - 60000)) {
+        // Session likely expired - redirect to login
+        // Laravel will handle actual session validation on next request
+        window.location.href = '{{ route("admin.login") }}';
+      }
+    }, 30000); // Check every 30 seconds
+    
+    // Attempt to logout on tab close (not always reliable, but worth trying)
+    window.addEventListener('beforeunload', function(e) {
+      if (navigator.sendBeacon) {
+        try {
+          // Send a logout request via beacon (doesn't block page unload)
+          const url = '{{ route("admin.logout.auto") }}';
+          navigator.sendBeacon(url);
+        } catch(err) {
+          // Ignore errors - not critical if this fails
+        }
+      }
+    });
+    
+    // Handle page visibility change (tab switch, minimize)
+    document.addEventListener('visibilitychange', function() {
+      if (document.visibilityState === 'visible') {
+        // Tab is visible again - update last activity time
+        lastActivity = Date.now();
+      }
+    });
+  </script>
+  @endif
 </body>
 </html>

@@ -1,0 +1,33 @@
+// Production API Configuration Example
+// Copy this to api.js and update with your production URLs
+
+// Production API URLs
+const PROD_API_BASE_URL = 'https://api.yourdomain.com/api'; // Your Node.js API
+const PROD_LARAVEL_BASE_URL = 'https://api.yourdomain.com'; // Your Laravel API
+
+// Use environment-based configuration
+const API_BASE_URL = __DEV__ 
+  ? `http://${DEV_HOST}:3000/api`  // Development
+  : PROD_API_BASE_URL; // Production
+
+const LARAVEL_BASE_URL = __DEV__
+  ? `http://${DEV_HOST}:8000`  // Development
+  : PROD_LARAVEL_BASE_URL; // Production
+
+export default {
+  BASE_URL: API_BASE_URL,
+  LARAVEL_BASE_URL: LARAVEL_BASE_URL,
+  HEALTH: `${API_BASE_URL}/diagnostics`,
+  LOGIN: `${API_BASE_URL}/mobile/login`,
+  LOGOUT: `${LARAVEL_BASE_URL}/api/mobile/logout`,
+  PROFILE: `${API_BASE_URL}/mobile/profile`,
+  TICKETS: {
+    CREATE: `${LARAVEL_BASE_URL}/api/mobile/tickets`,
+    LIST: `${LARAVEL_BASE_URL}/api/mobile/tickets`,
+    SHOW: (id) => `${LARAVEL_BASE_URL}/api/mobile/tickets/${id}`,
+  },
+  OCR: {
+    SCAN_ID: `${API_BASE_URL}/mobile/ocr/scan-id`,
+  },
+};
+

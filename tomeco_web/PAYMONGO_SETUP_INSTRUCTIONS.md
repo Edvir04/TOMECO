@@ -74,11 +74,8 @@ Webhooks allow PayMongo to notify your application when payments are completed.
 
 1. **Get Your Webhook URL:**
    - Your webhook URL should be: `https://yourdomain.com/gcash/payment/callback`
-   - For local testing, use a service like **ngrok**:
-     ```bash
-     ngrok http 8000
-     ```
-   - Then use: `https://your-ngrok-url.ngrok.io/gcash/payment/callback`
+   - For production, use your Render service URL: `https://your-service.onrender.com/gcash/payment/callback`
+   - For local testing, webhooks require a public URL (use Render or another hosting service)
 
 2. **Configure Webhook in PayMongo:**
    - Go to PayMongo Dashboard → **Settings** → **Webhooks**
@@ -129,10 +126,11 @@ Webhooks allow PayMongo to notify your application when payments are completed.
 
 ### Issue: "Webhook not receiving events"
 **Solution:**
-- Verify webhook URL is accessible (use ngrok for local testing)
+- Verify webhook URL is accessible (use Render or other hosting service)
 - Check webhook secret matches in `.env`
 - Ensure webhook is enabled in PayMongo dashboard
 - Check server logs for webhook requests
+- **Note:** Webhooks won't work on localhost without a public URL
 
 ### Issue: "Payment successful but ticket not updated"
 **Solution:**

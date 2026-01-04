@@ -232,14 +232,16 @@
 
 .modal-content {
     background: #fff;
-    border-radius: 16px;
+    border-radius: 24px;
     width: 90%;
     max-width: 700px;
     max-height: 90vh;
-    overflow-y: auto;
+    overflow-y: hidden; /* body handles scroll */
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
     animation: slideUp 0.3s ease;
     margin: auto;
+    border: 1px solid #e5e7eb;
+    overflow: hidden; /* keep curved edges clean */
 }
 
 @keyframes slideUp {
@@ -292,6 +294,8 @@
 
 .modal-body {
     padding: 24px;
+    max-height: calc(90vh - 72px - 24px); /* total height minus header and padding */
+    overflow-y: auto;
 }
 
 .loading-spinner {
@@ -514,19 +518,31 @@ function showPersonalInfo() {
         </div>
     `;
     
+    // Resolve URL explicitly to avoid route/helper mismatches
+    const personalInfoUrl = '/admin/settings/personal-info';
+
     // Fetch personal information
-    fetch('{{ route("admin.settings.personal-info") }}', {
+    fetch(personalInfoUrl, {
         method: 'GET',
+        credentials: 'include', // ensure cookies/session sent
+        cache: 'no-store',
         headers: {
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
             'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
         }
     })
-    .then(response => {
+    .then(async response => {
+        const text = await response.text();
         if (!response.ok) {
-            throw new Error('Failed to fetch personal information');
+            throw new Error(`Failed to fetch personal information (HTTP ${response.status})${text ? ' - ' + text : ''}`);
         }
-        return response.json();
+        // Ensure we have JSON, otherwise surface the body
+        try {
+            return JSON.parse(text || '{}');
+        } catch (err) {
+            throw new Error(`Unexpected response (not JSON). Body: ${text?.slice(0,200) || 'empty'}`);
+        }
     })
     .then(data => {
         currentUserData = data;
@@ -647,6 +663,15 @@ function enableEditMode() {
                     <label>Contact Number</label>
                     <input type="text" name="contact_number" value="${data.contact_number || ''}" required>
                 </div>
+                ${data.role === 'superadmin' ? `
+                <div class="personal-info-item">
+                    <label>New Password <span style="color:#9ca3af;font-weight:500">(leave blank to keep)</span></label>
+                    <input type="password" name="password" minlength="8" placeholder="Enter new password">
+                </div>
+                <div class="personal-info-item">
+                    <label>Confirm Password</label>
+                    <input type="password" name="password_confirmation" minlength="8" placeholder="Re-type new password">
+                </div>` : ''}
                 <div class="personal-info-item personal-info-full">
                     <label>Address</label>
                     <textarea name="address" required>${data.address || ''}</textarea>

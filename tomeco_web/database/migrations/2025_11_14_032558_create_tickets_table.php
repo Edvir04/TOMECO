@@ -56,8 +56,10 @@ return new class extends Migration
             $table->string('apprehending_officer')->nullable();
             $table->string('tomeco_did')->nullable();
             $table->longText('signature')->nullable(); // Officer e-signature
-            $table->string('image')->nullable(); // Evidence photo
+            $table->json('images')->nullable(); // Evidence photos (array of images)
             $table->longText('driver_signature')->nullable(); // Driver e-signature
+            $table->enum('status', ['Paid', 'Unpaid'])->default('Unpaid'); // Ticket payment status
+            $table->decimal('price', 10, 2)->default(500.00); // Ticket price/fine in pesos (calculated from violations)
 
             $table->timestamps(); // Adds created_at and updated_at
         });

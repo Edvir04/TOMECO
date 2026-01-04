@@ -11,17 +11,20 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('tickets', function (Blueprint $table) {
-            // Change image column from string to json to store multiple images
-            $table->json('images')->nullable()->after('signature');
-        });
-        
-        // Migrate existing single image data to images array
-        \DB::statement("UPDATE tickets SET images = JSON_ARRAY(image) WHERE image IS NOT NULL");
-        
-        Schema::table('tickets', function (Blueprint $table) {
-            $table->dropColumn('image');
-        });
+        // Only run if image column exists and images column doesn't exist
+        if (Schema::hasColumn('tickets', 'image') && !Schema::hasColumn('tickets', 'images')) {
+            Schema::table('tickets', function (Blueprint $table) {
+                // Change image column from string to json to store multiple images
+                $table->json('images')->nullable()->after('signature');
+            });
+            
+            // Migrate existing single image data to images array (PostgreSQL syntax)
+            \DB::statement("UPDATE tickets SET images = json_build_array(image)::jsonb WHERE image IS NOT NULL");
+            
+            Schema::table('tickets', function (Blueprint $table) {
+                $table->dropColumn('image');
+            });
+        }
     }
 
     /**
@@ -29,16 +32,19 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('tickets', function (Blueprint $table) {
-            $table->string('image')->nullable()->after('signature');
-        });
-        
-        // Migrate images array back to single image (take first image)
-        \DB::statement("UPDATE tickets SET image = JSON_UNQUOTE(JSON_EXTRACT(images, '$[0]')) WHERE images IS NOT NULL AND JSON_LENGTH(images) > 0");
-        
-        Schema::table('tickets', function (Blueprint $table) {
-            $table->dropColumn('images');
-        });
+        // Only run if images column exists and image column doesn't exist
+        if (Schema::hasColumn('tickets', 'images') && !Schema::hasColumn('tickets', 'image')) {
+            Schema::table('tickets', function (Blueprint $table) {
+                $table->string('image')->nullable()->after('signature');
+            });
+            
+            // Migrate images array back to single image (take first image) - PostgreSQL syntax
+            \DB::statement("UPDATE tickets SET image = images->>0 WHERE images IS NOT NULL AND jsonb_array_length(images::jsonb) > 0");
+            
+            Schema::table('tickets', function (Blueprint $table) {
+                $table->dropColumn('images');
+            });
+        }
     }
 };
 

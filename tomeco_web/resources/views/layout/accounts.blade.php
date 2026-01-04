@@ -110,14 +110,49 @@
             padding-top: 60px;
         }
     }
+
+    /* Page-specific pagination spacing */
+    nav[role="navigation"] .flex-fill,
+    nav[role="navigation"] .flex-sm-fill {
+        column-gap: 26px; /* widen gap between text and buttons */
+    }
+    nav[role="navigation"] .pagination {
+        margin-bottom: 0;
+    }
+    nav[role="navigation"] .small.text-muted {
+        margin: 0;
+    }
+    nav[role="navigation"] .flex-fill:first-child,
+    nav[role="navigation"] .flex-sm-fill:first-child {
+        flex: 0 0 auto;
+        justify-content: flex-start;
+        padding-left: 12px; /* nudge text to the right */
+        margin-right: 6px;  /* extra breathing room from pager */
+    }
 </style>
 
 <div class="page-wrap">
     <div class="toolbar">
         <h2 style="margin:0;">Accounts</h2>
-        <button class="btn btn-primary" id="openCreateModal" aria-haspopup="dialog" aria-controls="createModal">
-            ➕ Create Account
-        </button>
+        <div style="display:flex;gap:12px;align-items:center;">
+            <form method="GET" action="{{ route('admin.accounts') }}" id="searchForm" style="display:flex;gap:8px;align-items:center;">
+                <input type="text" name="search" value="{{ $search ?? '' }}" placeholder="Search accounts..." style="border:1px solid #d1d5db;border-radius:8px;padding:8px 12px;min-width:250px;">
+                <select name="role" id="roleFilter" onchange="document.getElementById('searchForm').submit();" style="border:1px solid #d1d5db;border-radius:8px;padding:8px 12px;min-width:150px;">
+                    <option value="">All Roles</option>
+                    @if($currentRole === 'superadmin')
+                        <option value="superadmin" {{ ($roleFilter ?? '') === 'superadmin' ? 'selected' : '' }}>Super Admin</option>
+                        <option value="admin" {{ ($roleFilter ?? '') === 'admin' ? 'selected' : '' }}>Admin</option>
+                    @endif
+                    <option value="enforcer" {{ ($roleFilter ?? '') === 'enforcer' ? 'selected' : '' }}>Tomeco Enforcer</option>
+                </select>
+                @if(!empty($search) || !empty($roleFilter))
+                    <a href="{{ route('admin.accounts') }}" class="btn btn-light" style="white-space:nowrap;">Clear</a>
+                @endif
+            </form>
+            <button class="btn btn-primary" id="openCreateModal" aria-haspopup="dialog" aria-controls="createModal">
+                ➕ Create Account
+            </button>
+        </div>
     </div>
 
     @if (session('status'))
@@ -212,6 +247,9 @@
             @endforelse
             </tbody>
         </table>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+        {{ $accounts->links() }}
     </div>
 </div>
 
@@ -441,6 +479,7 @@
     const viewModal = document.getElementById('viewModal');
     const closeViewBtn = document.getElementById('closeViewModal');
     const viewModalBody = document.getElementById('viewModalBody');
+    const currentRole = "{{ $currentRole }}";
     let currentAccountId = null;
     let currentAccountRole = null;
     let currentAccountData = null;
@@ -510,6 +549,8 @@
                          account.role === 'admin' ? 'role-admin' : 'role-enforcer';
         const roleLabel = account.role === 'superadmin' ? 'Super Admin' : 
                          account.role === 'admin' ? 'Admin' : 'Tomeco Enforcer';
+        const canEdit = currentRole === 'superadmin' || (currentRole === 'admin' && account.role === 'enforcer');
+        const canDelete = currentRole === 'superadmin' || (currentRole === 'admin' && account.role === 'enforcer');
         const createdDate = account.created_at ? new Date(account.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A';
         
         // Handle profile picture URL - ensure it's a full URL
@@ -565,11 +606,11 @@
             </div>
             <div style="display:flex;justify-content:space-between;gap:8px;margin-top:20px; border-top: 1px solid #eee; padding-top: 16px;">
                 <div>
-                    <button type="button" class="btn btn-danger" onclick="confirmDeleteAccount('${account.role}', ${account.id})">Delete</button>
+                    ${canDelete ? `<button type="button" class="btn btn-danger" onclick="confirmDeleteAccount('${account.role}', ${account.id})">Delete</button>` : ''}
                 </div>
                 <div style="display:flex;gap:8px;">
                     <button type="button" class="btn btn-light" onclick="closeViewModal()">Close</button>
-                    <button type="button" class="btn btn-primary" onclick="openEditAccountModal('${account.role}', ${account.id})">Edit</button>
+                    ${canEdit ? `<button type="button" class="btn btn-primary" onclick="openEditAccountModal('${account.role}', ${account.id})">Edit</button>` : ''}
                 </div>
             </div>
         `;
@@ -578,6 +619,11 @@
     // Edit Account functionality - reuse create modal
     function openEditAccountModal(role, id) {
         if (!id || !role) return;
+        const canEdit = currentRole === 'superadmin' || (currentRole === 'admin' && role === 'enforcer');
+        if (!canEdit) {
+            alert('You do not have permission to edit this account.');
+            return;
+        }
         
         // Close view modal
         closeViewModal();
@@ -723,5 +769,7 @@
         
         originalOpenModal();
     };
+
+    // Pagination container styling helper (optional)
 </script>
 @endsection

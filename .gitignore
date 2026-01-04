@@ -19,11 +19,40 @@ Thumbs.db
 .nova/
 .zed/
 
-# Archives (uncomment if you don't want to track zip files)
-# *.zip
+# Archives
+*.zip
+*.tar.gz
+*.rar
 
-# Office Documents (uncomment if you don't want to track docx files)
-# *.docx
+# Office Documents
+*.docx
+*.doc
+
+# Python virtual environments
+venv/
+env/
+card_id_ocr_venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+myDatabase.sql
+
+# Large OCR model files (if not needed in repo)
+Tc_ID_Card_OCR-main/model/*.pth
+Tc_ID_Card_OCR-main/model/*.caffemodel
+Tc_ID_Card_OCR-main/model/*.dat
 
 # Node modules (already handled in subdirectories, but good to have at root)
 node_modules/

@@ -9,6 +9,6 @@ echo "Server will be available at: http://localhost:8000"
 # Set environment variable for admin portal
 export APP_PORTAL_TYPE=admin
 
-# Start Laravel development server
-php artisan serve --port=8000
+# Start Laravel development server (localhost only)
+php artisan serve --host=127.0.0.1 --port=8000
 

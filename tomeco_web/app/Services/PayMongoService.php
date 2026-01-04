@@ -161,8 +161,20 @@ class PayMongoService
                 return $response->json();
             }
 
-            Log::error('PayMongo Checkout Session Error: ' . $response->body());
-            Log::error('PayMongo Response Status: ' . $response->status());
+            // Log detailed error information
+            $errorBody = $response->body();
+            $errorStatus = $response->status();
+            Log::error('PayMongo Checkout Session Error: ' . $errorBody);
+            Log::error('PayMongo Response Status: ' . $errorStatus);
+            
+            // Try to parse error details if available
+            $errorData = json_decode($errorBody, true);
+            if (isset($errorData['errors'])) {
+                foreach ($errorData['errors'] as $error) {
+                    Log::error('PayMongo Error Detail: ' . json_encode($error));
+                }
+            }
+            
             return null;
         } catch (\Exception $e) {
             Log::error('PayMongo Checkout Session Error: ' . $e->getMessage());
@@ -198,12 +210,124 @@ class PayMongoService
     }
 
     /**
+     * Retrieve checkout session by ID
+     */
+    public function getCheckoutSession($checkoutSessionId)
+    {
+        try {
+            $httpClient = Http::withBasicAuth($this->secretKey, '');
+
+            // For Windows/development: disable SSL verification if certificate bundle is missing
+            if (config('app.env') === 'local' || config('app.debug')) {
+                $httpClient = $httpClient->withoutVerifying();
+            }
+
+            $response = $httpClient->get($this->apiUrl . '/checkout_sessions/' . $checkoutSessionId);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            Log::error('PayMongo Get Checkout Session Error: ' . $response->body());
+            return null;
+        } catch (\Exception $e) {
+            Log::error('PayMongo Get Checkout Session Error: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * List checkout sessions (with pagination)
+     * PayMongo API supports limit and after parameters for pagination
+     */
+    public function listCheckoutSessions($limit = 100, $after = null)
+    {
+        try {
+            $httpClient = Http::withBasicAuth($this->secretKey, '');
+
+            // For Windows/development: disable SSL verification if certificate bundle is missing
+            if (config('app.env') === 'local' || config('app.debug')) {
+                $httpClient = $httpClient->withoutVerifying();
+            }
+
+            $url = $this->apiUrl . '/checkout_sessions?limit=' . $limit;
+            if ($after) {
+                $url .= '&after=' . $after;
+            }
+
+            $response = $httpClient->get($url);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            Log::error('PayMongo List Checkout Sessions Error: ' . $response->body());
+            return null;
+        } catch (\Exception $e) {
+            Log::error('PayMongo List Checkout Sessions Error: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Retrieve payment by ID
+     */
+    public function getPayment($paymentId)
+    {
+        try {
+            $httpClient = Http::withBasicAuth($this->secretKey, '');
+
+            // For Windows/development: disable SSL verification if certificate bundle is missing
+            if (config('app.env') === 'local' || config('app.debug')) {
+                $httpClient = $httpClient->withoutVerifying();
+            }
+
+            $response = $httpClient->get($this->apiUrl . '/payments/' . $paymentId);
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+
+            Log::error('PayMongo Get Payment Error: ' . $response->body());
+            return null;
+        } catch (\Exception $e) {
+            Log::error('PayMongo Get Payment Error: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Verify webhook signature
+     * PayMongo uses format: t=timestamp,te=signature,li=...
      */
     public function verifyWebhookSignature($payload, $signature, $secret)
     {
-        $computedSignature = hash_hmac('sha256', $payload, $secret);
-        return hash_equals($computedSignature, $signature);
+        if (empty($signature) || empty($secret)) {
+            return false;
+        }
+        
+        // Parse PayMongo signature format: t=timestamp,te=signature,li=...
+        $signatureParts = [];
+        foreach (explode(',', $signature) as $part) {
+            $keyValue = explode('=', $part, 2);
+            if (count($keyValue) === 2) {
+                $signatureParts[$keyValue[0]] = $keyValue[1];
+            }
+        }
+        
+        // Extract timestamp and signature
+        $timestamp = $signatureParts['t'] ?? null;
+        $receivedSignature = $signatureParts['te'] ?? null;
+        
+        if (!$timestamp || !$receivedSignature) {
+            return false;
+        }
+        
+        // Compute expected signature: HMAC-SHA256 of timestamp + payload
+        $signedPayload = $timestamp . '.' . $payload;
+        $expectedSignature = hash_hmac('sha256', $signedPayload, $secret);
+        
+        return hash_equals($expectedSignature, $receivedSignature);
     }
 }
 

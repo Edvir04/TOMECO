@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Hash;
 use App\Models\Superadmin;
 use App\Models\Admin;
 use App\Models\TomecoEnforcer;
@@ -16,24 +17,24 @@ class SettingsController extends Controller
         $user = null;
         $role = null;
 
-        // Check which guard is authenticated
+        // Check which guard is authenticated (only superadmin and admin can access web portal)
         if (Auth::guard('superadmin')->check()) {
             $user = Auth::guard('superadmin')->user();
             $role = 'superadmin';
         } elseif (Auth::guard('admin')->check()) {
             $user = Auth::guard('admin')->user();
             $role = 'admin';
-        } elseif (Auth::guard('enforcer')->check()) {
-            $user = Auth::guard('enforcer')->user();
-            $role = 'enforcer';
         }
 
         if (!$user) {
             return redirect()->route('admin.login')->withErrors(['message' => 'Please login to access settings.']);
         }
 
-        // Convert profile picture path to URL if needed
-        if ($user->profile_picture && !filter_var($user->profile_picture, FILTER_VALIDATE_URL) && !str_starts_with($user->profile_picture, '/')) {
+        // Convert profile picture path to URL if needed (avoid PHP 8 helpers for broader compatibility)
+        if ($user->profile_picture
+            && !filter_var($user->profile_picture, FILTER_VALIDATE_URL)
+            && !(substr($user->profile_picture, 0, 1) === '/')
+        ) {
             $user->profile_picture = Storage::url($user->profile_picture);
         }
 
@@ -45,7 +46,7 @@ class SettingsController extends Controller
         $user = null;
         $role = null;
 
-        // Check which guard is authenticated
+        // Check which guard is authenticated (only superadmin and admin can access web portal)
         if (Auth::guard('superadmin')->check()) {
             $user = Auth::guard('superadmin')->user();
             $role = 'superadmin';
@@ -56,11 +57,6 @@ class SettingsController extends Controller
             $role = 'admin';
             // Fetch fresh data from Admin model
             $user = Admin::findOrFail($user->id);
-        } elseif (Auth::guard('enforcer')->check()) {
-            $user = Auth::guard('enforcer')->user();
-            $role = 'enforcer';
-            // Fetch fresh data from TomecoEnforcer model
-            $user = TomecoEnforcer::findOrFail($user->id);
         }
 
         if (!$user) {
@@ -77,7 +73,13 @@ class SettingsController extends Controller
             'dob' => $user->dob ? $user->dob->toDateString() : null,
             'contact_number' => $user->contact_number,
             'address' => $user->address,
-            'profile_picture' => $user->profile_picture ? (filter_var($user->profile_picture, FILTER_VALIDATE_URL) ? $user->profile_picture : (str_starts_with($user->profile_picture, '/') ? $user->profile_picture : Storage::url($user->profile_picture))) : null,
+            'profile_picture' => $user->profile_picture
+                ? (filter_var($user->profile_picture, FILTER_VALIDATE_URL)
+                    ? $user->profile_picture
+                    : ((substr($user->profile_picture, 0, 1) === '/')
+                        ? $user->profile_picture
+                        : Storage::url($user->profile_picture)))
+                : null,
             'created_at' => $user->created_at ? $user->created_at->toDateTimeString() : null,
         ]);
     }
@@ -87,7 +89,7 @@ class SettingsController extends Controller
         $user = null;
         $role = null;
 
-        // Check which guard is authenticated
+        // Check which guard is authenticated (only superadmin and admin can access web portal)
         if (Auth::guard('superadmin')->check()) {
             $user = Auth::guard('superadmin')->user();
             $role = 'superadmin';
@@ -96,17 +98,13 @@ class SettingsController extends Controller
             $user = Auth::guard('admin')->user();
             $role = 'admin';
             $user = Admin::findOrFail($user->id);
-        } elseif (Auth::guard('enforcer')->check()) {
-            $user = Auth::guard('enforcer')->user();
-            $role = 'enforcer';
-            $user = TomecoEnforcer::findOrFail($user->id);
         }
 
         if (!$user) {
             return response()->json(['error' => 'User not found'], 404);
         }
 
-        $request->validate([
+        $rules = [
             'fullname' => ['required', 'string', 'max:255'],
             'username' => ['required', 'string', 'max:255'],
             'id_number' => ['required', 'string', 'max:255'],
@@ -115,7 +113,14 @@ class SettingsController extends Controller
             'contact_number' => ['required', 'string', 'max:64'],
             'address' => ['required', 'string', 'max:255'],
             'profile_picture' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif', 'max:5120'], // 5MB max
-        ]);
+        ];
+
+        // Only superadmin can change password
+        if ($role === 'superadmin') {
+            $rules['password'] = ['nullable', 'string', 'min:8', 'confirmed'];
+        }
+
+        $request->validate($rules);
 
         $user->fullname = $request->fullname;
         $user->username = $request->username;
@@ -124,6 +129,9 @@ class SettingsController extends Controller
         $user->dob = $request->dob;
         $user->contact_number = $request->contact_number;
         $user->address = $request->address;
+        if ($role === 'superadmin' && $request->filled('password')) {
+            $user->password = Hash::make($request->password);
+        }
 
         // Handle profile picture upload
         if ($request->hasFile('profile_picture')) {
@@ -140,7 +148,13 @@ class SettingsController extends Controller
         $user->save();
 
         // Get the full URL for the profile picture
-        $profilePictureUrl = $user->profile_picture ? (filter_var($user->profile_picture, FILTER_VALIDATE_URL) ? $user->profile_picture : (str_starts_with($user->profile_picture, '/') ? $user->profile_picture : Storage::url($user->profile_picture))) : null;
+        $profilePictureUrl = $user->profile_picture
+            ? (filter_var($user->profile_picture, FILTER_VALIDATE_URL)
+                ? $user->profile_picture
+                : ((substr($user->profile_picture, 0, 1) === '/')
+                    ? $user->profile_picture
+                    : Storage::url($user->profile_picture)))
+            : null;
 
         return response()->json([
             'success' => true,

@@ -1,0 +1,140 @@
+================================================================================
+TOMECO APP - EXPO GO DEPLOYMENT - CMD INSTRUCTIONS
+================================================================================
+
+IMPORTANT: You already have the app! Don't run the create-expo-app command.
+The command you provided is for creating a NEW app, but you already have tomeco_app.
+
+================================================================================
+STEP-BY-STEP INSTRUCTIONS (Open separate CMD windows for each)
+================================================================================
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ STEP 1: Start Admin Server (CMD Window 1)                               │
+└─────────────────────────────────────────────────────────────────────────┘
+
+cd C:\Users\Charles Rosete\Capstone_Gigs\tomeco_web
+set APP_PORTAL_TYPE=admin
+php artisan serve --port=8000
+
+Keep this window open!
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ STEP 2: Start ngrok Tunnels (CMD Window 2)                              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+cd C:\Users\Charles Rosete\Capstone_Gigs\tomeco_web
+start-ngrok-both.bat
+
+Keep this window open!
+
+Verify ngrok is running: Open browser to http://127.0.0.1:4040
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ STEP 3: Test API Endpoint (CMD Window 3 - Optional)                     │
+└─────────────────────────────────────────────────────────────────────────┘
+
+curl https://Tomeco.ngrok.dev/api/mobile/health
+
+Expected: {"success":true,"message":"API is accessible",...}
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ STEP 4: Install Dependencies (CMD Window 4)                            │
+└─────────────────────────────────────────────────────────────────────────┘
+
+cd C:\Users\Charles Rosete\Capstone_Gigs\tomeco_app
+npm install
+
+Wait for installation to complete.
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ STEP 5: Start Expo Development Server (Same Window 4)                    │
+└─────────────────────────────────────────────────────────────────────────┘
+
+npx expo start
+
+OR
+
+npm start
+
+You should see a QR code!
+
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ STEP 6: Connect with Expo Go on Your Phone                              │
+└─────────────────────────────────────────────────────────────────────────┘
+
+1. Open Expo Go app on your phone
+2. Scan the QR code shown in CMD
+3. Wait for app to load
+
+
+================================================================================
+QUICK START (All-in-One)
+================================================================================
+
+If you want to use the quick deploy script:
+
+cd C:\Users\Charles Rosete\Capstone_Gigs\tomeco_app
+QUICK_DEPLOY_CMD.bat
+
+But you still need to start backend and ngrok separately!
+
+
+================================================================================
+VERIFY API CONFIGURATION
+================================================================================
+
+Make sure config/api.js has:
+
+const USE_NGROK = true;  // Set to true for Expo Go with ngrok
+
+This is already configured! ✅
+
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Problem: "Network request failed"
+Solution:
+  1. Check ngrok is running: http://127.0.0.1:4040
+  2. Test: curl https://Tomeco.ngrok.dev/api/mobile/health
+  3. Verify backend is running on port 8000
+
+Problem: "Cannot connect to Expo"
+Solution:
+  1. Make sure phone and computer are on same WiFi
+  2. Try: npx expo start --tunnel
+
+Problem: "QR code not working"
+Solution:
+  1. Use tunnel mode: npx expo start --tunnel
+  2. Or manually enter URL in Expo Go app
+
+
+================================================================================
+IMPORTANT NOTES
+================================================================================
+
+✅ Keep all CMD windows open while testing
+✅ ngrok must stay running for API to work
+✅ Backend server must stay running on port 8000
+⚠️  Expo Go has limitations - some features may not work
+⚠️  For full features, use development build: npx expo run:android
+
+
+================================================================================
+STOP EVERYTHING
+================================================================================
+
+1. Press Ctrl+C in each CMD window
+2. Stop ngrok: cd tomeco_web && stop-ngrok.bat
+
+
+================================================================================
+

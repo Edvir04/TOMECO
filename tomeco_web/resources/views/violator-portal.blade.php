@@ -3,7 +3,7 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes">
 
   <title>TOMECO Violator Portal</title>
   @vite(['resources/css/app.css','resources/js/app.js'])
@@ -44,7 +44,18 @@
       justify-content:center;
     }
 
-    .container { width:100%; max-width:1100px; margin:0 auto; padding:0 16px; }
+    .container { 
+      width:100%; 
+      max-width:1100px; 
+      margin:0 auto; 
+      padding:0 16px; 
+    }
+    
+    @media (max-width:640px){
+      .container{
+        padding:0 12px;
+      }
+    }
 
     .hero{
       width:100%;
@@ -75,11 +86,14 @@
       max-width:500px;
       margin:26px 0 40px;
       position:relative;
+      box-sizing:border-box;
     }
 
     .search-input-wrapper{
       position:relative;
       width:100%;
+      box-sizing:border-box;
+      max-width:100%;
     }
 
     .search-input{
@@ -89,6 +103,10 @@
       border-radius:10px;
       font-size:1rem;
       transition:border-color .2s ease;
+      box-sizing:border-box;
+      -webkit-appearance:none;
+      appearance:none;
+      min-height:44px;
     }
 
     .search-input:focus{
@@ -141,6 +159,7 @@
       z-index:1000;
       padding:20px;
       animation:fadeIn .2s ease;
+      overflow-y:auto;
     }
 
     @keyframes fadeIn{
@@ -172,6 +191,7 @@
       display:flex;
       flex-direction:column;
       animation:slideUp .3s ease;
+      margin:auto;
     }
 
     .ticket-details-header{
@@ -181,6 +201,7 @@
       display:flex;
       justify-content:space-between;
       align-items:center;
+      flex-shrink:0;
     }
 
     .ticket-details-header h3{
@@ -273,7 +294,10 @@
     .ticket-details-content{
       padding:24px;
       overflow-y:auto;
+      overflow-x:hidden;
       flex:1;
+      min-height:0;
+      -webkit-overflow-scrolling:touch;
     }
 
 
@@ -294,10 +318,17 @@
       gap:12px;
       margin-bottom:12px;
     }
+    
+    /* Ensure fields don't overflow on mobile */
+    .ticket-field[style*="grid-column"]{
+      grid-column:1 / -1;
+    }
 
     .ticket-field{
       display:flex;
       flex-direction:column;
+      min-width:0;
+      word-wrap:break-word;
     }
 
     .ticket-label{
@@ -313,6 +344,8 @@
       padding:8px 12px;
       background:#f9fafb;
       border-radius:6px;
+      word-wrap:break-word;
+      overflow-wrap:break-word;
     }
 
     .ticket-image{
@@ -332,33 +365,295 @@
     }
 
     @media (max-width:640px){
-      .search-input{
-        padding-right:100px;
+      /* Main hero adjustments */
+      .main-hero{
+        padding-top: var(--nav-h);
+        min-height: calc(100vh - var(--nav-h));
+        min-height: calc(100svh - var(--nav-h));
       }
-      .search-btn{
-        padding:10px 16px;
-        font-size:0.85rem;
+      
+      .hero{
+        padding:24px 12px;
       }
-      .ticket-details-header{
-        padding:16px;
-        flex-wrap:wrap;
-      }
-      .ticket-details-header h3{
-        font-size:1.2rem;
+      
+      .hero h2{
+        font-size:0.95rem;
         margin-bottom:12px;
-        width:100%;
+        padding:0 8px;
       }
+      
+      .hero img{
+        width:140px;
+        height:140px;
+        margin:8px 0 10px;
+      }
+      
+      .hero h1{
+        font-size:1.3rem;
+        margin:8px 0 0;
+      }
+      
+      /* Search form adjustments */
+      .search-form{
+        max-width:100%;
+        margin:20px 0 30px;
+        padding:0 8px;
+        box-sizing:border-box;
+      }
+      
+      .search-input-wrapper{
+        width:100%;
+        box-sizing:border-box;
+      }
+      
+      .search-input{
+        padding:10px 85px 10px 12px;
+        font-size:16px;
+        border-radius:8px;
+        width:100%;
+        box-sizing:border-box;
+        -webkit-appearance:none;
+        appearance:none;
+        min-height:44px;
+        max-width:100%;
+      }
+      
+      .search-input::placeholder{
+        font-size:14px;
+        opacity:0.7;
+      }
+      
+      .search-btn{
+        padding:8px 14px;
+        font-size:0.8rem;
+        right:3px;
+        height:calc(100% - 6px);
+        border-radius:6px;
+        min-width:70px;
+        box-sizing:border-box;
+      }
+      
+      /* Modal adjustments for mobile */
+      .modal-overlay{
+        padding:8px;
+        align-items:flex-start;
+        padding-top:10px;
+        padding-bottom:10px;
+        -webkit-overflow-scrolling:touch;
+      }
+      
+      .ticket-details{
+        max-width:100%;
+        width:100%;
+        max-height:calc(100vh - 20px);
+        max-height:calc(100svh - 20px);
+        border-radius:8px;
+        margin:auto;
+        display:flex;
+        flex-direction:column;
+        box-shadow:0 4px 20px rgba(0,0,0,.3);
+      }
+      
+      .ticket-details-header{
+        padding:12px 12px;
+        flex-wrap:wrap;
+        border-radius:8px 8px 0 0;
+        flex-shrink:0;
+        position:sticky;
+        top:0;
+        z-index:10;
+      }
+      
+      .ticket-details-header h3{
+        font-size:1rem;
+        margin-bottom:8px;
+        width:100%;
+        order:1;
+        line-height:1.3;
+      }
+      
       .ticket-details-actions{
         width:100%;
-        justify-content:flex-end;
+        justify-content:space-between;
+        order:2;
+        gap:4px;
+        flex-wrap:nowrap;
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+        scrollbar-width:none;
+        -ms-overflow-style:none;
       }
+      
+      .ticket-details-actions::-webkit-scrollbar{
+        display:none;
+      }
+      
       .action-btn{
-        padding:6px 12px;
-        font-size:0.85rem;
+        padding:7px 8px;
+        font-size:0.7rem;
+        flex:1 1 auto;
+        min-width:60px;
+        justify-content:center;
+        white-space:nowrap;
+        flex-shrink:0;
       }
+      
       .action-btn svg{
-        width:14px;
-        height:14px;
+        width:11px;
+        height:11px;
+        flex-shrink:0;
+      }
+      
+      .close-modal-btn{
+        width:32px;
+        height:32px;
+        font-size:1.4rem;
+        order:3;
+        margin-left:auto;
+        flex-shrink:0;
+        position:absolute;
+        top:8px;
+        right:8px;
+      }
+      
+      .ticket-details-content{
+        padding:14px 10px;
+        overflow-y:auto;
+        overflow-x:hidden;
+        -webkit-overflow-scrolling:touch;
+        flex:1;
+        min-height:0;
+      }
+      
+      .ticket-section{
+        margin-bottom:16px;
+        break-inside:avoid;
+      }
+      
+      .ticket-section h4{
+        font-size:0.95rem;
+        margin-bottom:8px;
+        line-height:1.3;
+        word-wrap:break-word;
+      }
+      
+      .ticket-row{
+        gap:8px;
+        margin-bottom:8px;
+        grid-template-columns:1fr !important;
+      }
+      
+      .ticket-field{
+        width:100%;
+        min-width:0;
+        grid-column:1 !important;
+      }
+      
+      .ticket-label{
+        font-size:0.75rem;
+        margin-bottom:3px;
+        word-wrap:break-word;
+        line-height:1.3;
+      }
+      
+      .ticket-value{
+        font-size:0.85rem;
+        padding:8px 10px;
+        word-wrap:break-word;
+        overflow-wrap:break-word;
+        line-height:1.4;
+        min-height:auto;
+      }
+      
+      .ticket-image{
+        margin-top:8px;
+        border-radius:6px;
+        max-width:100%;
+        height:auto;
+        display:block;
+      }
+    }
+    
+    /* Extra small devices */
+    @media (max-width:480px){
+      .hero h2{
+        font-size:0.85rem;
+        line-height:1.4;
+      }
+      
+      .hero img{
+        width:120px;
+        height:120px;
+      }
+      
+      .hero h1{
+        font-size:1.15rem;
+      }
+      
+      .search-input{
+        padding:9px 80px 9px 10px;
+        font-size:16px;
+        min-height:44px;
+      }
+      
+      .search-input::placeholder{
+        font-size:13px;
+      }
+      
+      .search-btn{
+        padding:7px 12px;
+        font-size:0.75rem;
+        min-width:65px;
+        right:2px;
+      }
+      
+      .ticket-details-header{
+        padding:10px 10px;
+      }
+      
+      .ticket-details-header h3{
+        font-size:0.9rem;
+        margin-bottom:6px;
+      }
+      
+      .action-btn{
+        padding:6px 6px;
+        font-size:0.65rem;
+        min-width:55px;
+      }
+      
+      .action-btn svg{
+        width:10px;
+        height:10px;
+      }
+      
+      .close-modal-btn{
+        width:30px;
+        height:30px;
+        font-size:1.3rem;
+        top:6px;
+        right:6px;
+      }
+      
+      .ticket-details-content{
+        padding:12px 8px;
+      }
+      
+      .ticket-section{
+        margin-bottom:14px;
+      }
+      
+      .ticket-section h4{
+        font-size:0.9rem;
+      }
+      
+      .ticket-label{
+        font-size:0.7rem;
+      }
+      
+      .ticket-value{
+        font-size:0.8rem;
+        padding:6px 8px;
       }
     }
   </style>
@@ -412,12 +707,6 @@
               <div class="ticket-details-header">
                 <h3>Ticket Details</h3>
                 <div class="ticket-details-actions">
-                  <button class="action-btn" onclick="printTicket()" title="Print">
-                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
-                    </svg>
-                    Print
-                  </button>
                   <button class="action-btn gcash-btn" onclick="initiateGCashPayment()" title="Pay via GCash">
                     <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
@@ -442,6 +731,16 @@
                 <div class="ticket-field">
                   <span class="ticket-label">Citation Number</span>
                   <div class="ticket-value">{{ $ticket->citation_number ?? 'N/A' }}</div>
+                </div>
+                <div class="ticket-field">
+                  <span class="ticket-label">Status</span>
+                  <div class="ticket-value">
+                    @if($ticket->status === 'Paid')
+                      <span style="color: #10b981; font-weight: 600;">Paid</span>
+                    @else
+                      <span style="color: #ef4444; font-weight: 600;">Unpaid</span>
+                    @endif
+                  </div>
                 </div>
                 <div class="ticket-field">
                   <span class="ticket-label">Issued Date</span>
@@ -555,6 +854,41 @@
             </div>
             @endif
 
+            {{-- Fine Information --}}
+            <div class="ticket-section" style="background: #fef3c7; border: 2px solid #fbbf24; border-radius: 8px; padding: 12px;">
+              <h4 style="margin-top: 0; color: #92400e;">Fine Amount</h4>
+              <div class="ticket-row">
+                @php
+                  $basePrice = floatval($ticket->price ?? 0) - floatval($ticket->dss_penalty_fine_increase ?? 0);
+                  $penaltyIncrease = floatval($ticket->dss_penalty_fine_increase ?? 0);
+                  $totalPrice = floatval($ticket->price ?? 0);
+                @endphp
+                <div class="ticket-field" style="grid-column: 1 / -1;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0;">
+                    <span class="ticket-label">Base Fine:</span>
+                    <div class="ticket-value" style="font-weight: 600;">₱{{ number_format($basePrice, 2) }}</div>
+                  </div>
+                  @if($penaltyIncrease > 0)
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-top: 1px solid #fbbf24; margin-top: 8px;">
+                      <span class="ticket-label" style="color: #dc2626;">
+                        DSS Penalty ({{ $ticket->unpaid_violation_count ?? 0 }} unpaid violation(s)):
+                      </span>
+                      <div class="ticket-value" style="font-weight: 600; color: #dc2626;">+₱{{ number_format($penaltyIncrease, 2) }}</div>
+                    </div>
+                    @if($ticket->dss_notes)
+                      <div style="margin-top: 8px; padding: 8px; background: #fee2e2; border-radius: 4px; font-size: 12px; color: #991b1b;">
+                        <strong>Note:</strong> {{ $ticket->dss_notes }}
+                      </div>
+                    @endif
+                  @endif
+                  <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-top: 2px solid #fbbf24; margin-top: 8px;">
+                    <span class="ticket-label" style="font-size: 16px; font-weight: 700; color: #92400e;">Total Amount to Pay:</span>
+                    <div class="ticket-value" style="font-size: 20px; font-weight: 700; color: #dc2626;">₱{{ number_format($totalPrice, 2) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             {{-- Additional Information --}}
             @if($ticket->incident_notes || $ticket->remarks)
             <div class="ticket-section">
@@ -626,27 +960,34 @@
       const issuedDateTime = ticket.issued_date && ticket.issued_time ? `${issuedDate} ${ticket.issued_time}` : '';
       const signatureUrl = ticket.signature_url || ticket.signature || (ticket.image_url ? ticket.image_url : null);
       
+      // Handle driver signature URL
+      const driverSignatureUrl = ticket.driver_signature_url || ticket.driver_signature || null;
+      
+      const logoUrl = '{{ asset("assets/Logo.png") }}';
+      
       return `
-        <div class="print-ticket" style="width: 4in; margin: 0 auto; padding: 15px; font-family: Arial, sans-serif; font-size: 9px; line-height: 1.3;">
-          <!-- Header -->
-          <div style="text-align: right; margin-bottom: 10px;">
-            <div style="font-size: 8px; line-height: 1.2;">
-              <div><strong>Republic of the Philippines</strong></div>
-              <div><strong>City of Tacloban</strong></div>
-              <div><strong>CITY MAYOR'S OFFICE</strong></div>
-              <div style="margin-top: 3px;"><strong>TOMECO</strong></div>
-              <div style="font-size: 7px;">(Traffic Operations, Management, Enforcement and Control Office)</div>
+        <div class="print-ticket" style="width: 4.25in; margin: 0 auto; padding: 15px; font-family: Arial, sans-serif; font-size: 9px; line-height: 1.3;">
+          <!-- Logo and Header - Side by Side, Centered -->
+          <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 10px;">
+            <img src="${logoUrl}" alt="TOMECO Logo" style="height: 60px; width: auto; object-fit: contain; flex-shrink: 0;">
+            <div style="text-align: center; flex: 1;">
+              <div style="font-size: 8px; line-height: 1.2;">
+                <div><strong>Republic of the Philippines</strong></div>
+                <div><strong>City of Tacloban</strong></div>
+                <div><strong>CITY MAYOR'S OFFICE</strong></div>
+                <div style="margin-top: 3px;"><strong>TOMECO</strong></div>
+                <div style="font-size: 7px;">(Traffic Operations, Management, Enforcement and Control Office)</div>
+              </div>
             </div>
           </div>
 
           <!-- Title -->
-          <div style="text-align: center; margin: 12px 0; border: 2px solid #000; padding: 6px;">
-            <h2 style="margin: 0; font-size: 10px; font-weight: bold; text-transform: uppercase;">TRAFFIC VIOLATION RECEIPT/CITATION TICKET</h2>
+          <div style="text-align: center; margin: 12px 0; border: 2px solid #000; padding: 8px;">
+            <h2 style="margin: 0; font-size: 11px; font-weight: bold; text-transform: uppercase;">TRAFFIC VIOLATION RECEIPT/CITATION TICKET</h2>
           </div>
 
-          <!-- To and Citation Number -->
+          <!-- Citation Number -->
           <div style="margin-bottom: 10px;">
-            <div style="margin-bottom: 5px; font-size: 8px;"><strong>To:</strong> ${ticket.driver_firstname || ''} ${ticket.driver_middlename || ''} ${ticket.driver_lastname || ''}</div>
             <div style="margin-bottom: 10px;">
               <strong>Citation Ticket #:</strong> 
               <span style="font-size: 12px; font-weight: bold; color: #d00;">${ticket.citation_number || ''}</span>
@@ -658,28 +999,28 @@
             <tr>
               <td style="width: 50%; vertical-align: top; padding-right: 15px;">
                 <div style="margin-bottom: 8px;"><strong>Driver's Name:</strong></div>
-                <div style="margin-bottom: 3px;">(Last Name) <u>${ticket.driver_lastname || '________________'}</u></div>
-                <div style="margin-bottom: 3px;">(First Name) <u>${ticket.driver_firstname || '________________'}</u></div>
-                <div style="margin-bottom: 8px;">(Middle Name) <u>${ticket.driver_middlename || '________________'}</u></div>
-                <div style="margin-bottom: 8px;"><strong>Address:</strong> <u>${ticket.driver_address || '________________________________'}</u></div>
-                <div style="margin-bottom: 8px;"><strong>D/L Permit #:</strong> <u>${ticket.dl_number || '________________'}</u></div>
+                <div style="margin-bottom: 3px;">(Last Name) ${ticket.driver_lastname || '________________'}</div>
+                <div style="margin-bottom: 3px;">(First Name) ${ticket.driver_firstname || '________________'}</div>
+                <div style="margin-bottom: 8px;">(Middle Name) ${ticket.driver_middlename || '________________'}</div>
+                <div style="margin-bottom: 8px;"><strong>Address:</strong> ${ticket.driver_address || '________________________________'}</div>
+                <div style="margin-bottom: 8px;"><strong>D/L Permit #:</strong> ${ticket.dl_number || '________________'}</div>
                 <div style="margin-bottom: 5px;">
-                  <span style="margin-right: 10px;">[${ticket.dl_number ? 'X' : ' '}] Prof</span>
-                  <span style="margin-right: 10px;">[ ] N/P</span>
-                  <span style="margin-right: 10px;">[ ] S/P</span>
-                  <span>[ ] Others</span>
+                  <span style="margin-right: 10px;">[${ticket.dl_type === 'Prof' ? 'X' : ' '}] Prof</span>
+                  <span style="margin-right: 10px;">[${ticket.dl_type === 'N/P' ? 'X' : ' '}] N/P</span>
+                  <span style="margin-right: 10px;">[${ticket.dl_type === 'S/P' ? 'X' : ' '}] S/P</span>
+                  <span>[${ticket.dl_type && ticket.dl_type !== 'Prof' && ticket.dl_type !== 'N/P' && ticket.dl_type !== 'S/P' ? 'X' : ' '}] Others</span>
                 </div>
               </td>
               <td style="width: 50%; vertical-align: top; padding-left: 15px;">
-                <div style="margin-bottom: 8px;"><strong>PLT #:</strong> <u>${ticket.plate_number || '________________'}</u></div>
-                <div style="margin-bottom: 8px;"><strong>Make:</strong> <u>${ticket.vehicle_make || '________________'}</u></div>
-                <div style="margin-bottom: 8px;"><strong>Owner:</strong> <u>${ticket.owner_name || (ticket.driver_firstname + ' ' + ticket.driver_lastname) || '________________'}</u></div>
-                <div style="margin-bottom: 8px;"><strong>Address:</strong> <u>${ticket.owner_address || ticket.driver_address || '________________________________'}</u></div>
-                <div style="margin-bottom: 8px;"><strong>CR #:</strong> <u>${ticket.cr_number || '________________'}</u></div>
-                <div style="margin-bottom: 8px;"><strong>Model:</strong> <u>${ticket.vehicle_model || '________________'}</u></div>
-                <div style="margin-bottom: 8px;"><strong>Type:</strong> <u>________________</u></div>
-                <div style="margin-bottom: 8px;"><strong>OR #:</strong> <u>________________</u></div>
-                <div style="margin-bottom: 8px;"><strong>Year:</strong> <u>${ticket.vehicle_year || '____'}</u></div>
+                <div style="margin-bottom: 8px;"><strong>PLT #:</strong> ${ticket.plate_number || '________________'}</div>
+                <div style="margin-bottom: 8px;"><strong>Make:</strong> ${ticket.vehicle_make || '________________'}</div>
+                <div style="margin-bottom: 8px;"><strong>Owner:</strong> ${ticket.owner_name || (ticket.driver_firstname + ' ' + ticket.driver_lastname) || '________________'}</div>
+                <div style="margin-bottom: 8px;"><strong>Address:</strong> ${ticket.owner_address || ticket.driver_address || '________________________________'}</div>
+                <div style="margin-bottom: 8px;"><strong>CR #:</strong> ${ticket.cr_number || '________________'}</div>
+                <div style="margin-bottom: 8px;"><strong>Model:</strong> ${ticket.vehicle_model || '________________'}</div>
+                <div style="margin-bottom: 8px;"><strong>Type:</strong> ${ticket.vehicle_type || '________________'}</div>
+                <div style="margin-bottom: 8px;"><strong>OR #:</strong> ${ticket.or_number || '________________'}</div>
+                <div style="margin-bottom: 8px;"><strong>Year:</strong> ${ticket.vehicle_year || '____'}</div>
               </td>
             </tr>
           </table>
@@ -688,35 +1029,30 @@
           <div style="margin-bottom: 10px; border: 1px solid #000; padding: 6px;">
             <div style="margin-bottom: 5px; font-weight: bold; font-size: 8px;">VIOLATION(S)</div>
             <div style="font-size: 7px; margin-bottom: 6px; line-height: 1.3;">
-              You are hereby cited/charged for committing the violation(s) marked "x" hereunder: (Rule IX, CO# 2000-01) as amended and other related City Ordinances.
+              You are hereby cited/charged for committing the violation(s) hereunder: (Rule IX, CO# 2000-01) as amended and other related City Ordinances.
             </div>
             <div style="font-size: 7px; line-height: 1.5;">
-              <div>[ ] Driving without D/L</div>
-              <div>[ ] Unregistered Vehicle</div>
-              <div>[${hasViolation('Illegal Parking') ? 'X' : ' '}] Illegal Parking</div>
-              <div>[${hasViolation('Disregarding Traffic Sign') ? 'X' : ' '}] Disregarding Traffic Sign: <u>${ticket.violations_others_text || '________________'}</u></div>
-              <div>[ ] Obstruction</div>
-              <div>[ ] Truck Ban</div>
-              <div>[ ] Operating Along National Highway</div>
-              <div>[${hasViolation('No Helmet') ? 'X' : ' '}] No Helmet</div>
-              <div>[ ] Defective Head Light.</div>
-              <div>[${hasViolation('Other') || ticket.violations_others_text ? 'X' : ' '}] Others: <u>${ticket.violations_others_text || '________________'}</u></div>
-              <div>[ ] Violation to CO # 2007-10-31 "The Anti-Littering Ordinance"</div>
-              <div>[ ] Violation to CO # 2009-10-160 "The Anti-Smoking Ordinance."</div>
-              <div>[ ] Violation to CO # 2007-10-66 "The anti-urinating and Defecating Ordinance."</div>
-              ${hasViolation('Speeding') ? '<div>[X] Speeding</div>' : ''}
+              ${violations.length > 0 ? violations.map(v => {
+                // Skip "Other" violation if there's violations_others_text, we'll handle it separately
+                if (v === 'Other' && ticket.violations_others_text) {
+                  return '';
+                }
+                return '<div>• ' + v + '</div>';
+              }).filter(v => v !== '').join('') : ''}
+              ${ticket.violations_others_text ? '<div>• Others: ' + ticket.violations_others_text + '</div>' : ''}
+              ${violations.length === 0 && !ticket.violations_others_text ? '<div>No violations specified</div>' : ''}
             </div>
           </div>
 
           <!-- Incident Details -->
           <div style="margin-bottom: 10px; font-size: 8px;">
-            <div style="margin-bottom: 3px;"><strong>Place:</strong> <u>${ticket.place || '________________'}</u></div>
+            <div style="margin-bottom: 3px;"><strong>Place:</strong> ${ticket.place || '________________'}</div>
             <div style="margin-bottom: 3px;">
               <strong>Accident:</strong> 
-              <span style="margin-left: 8px;">[ ] Yes</span>
-              <span style="margin-left: 8px;">[X] No</span>
+              <span style="margin-left: 8px;">[${ticket.accident === true || ticket.accident === 'Yes' ? 'X' : ' '}] Yes</span>
+              <span style="margin-left: 8px;">[${ticket.accident === false || ticket.accident === 'No' || !ticket.accident ? 'X' : ' '}] No</span>
             </div>
-            <div style="margin-bottom: 3px;"><strong>Date & Time:</strong> <u>${issuedDateTime || '________________'}</u></div>
+            <div style="margin-bottom: 3px;"><strong>Date & Time:</strong> ${issuedDateTime || '________________'}</div>
           </div>
 
           <!-- Instructions and Driver's Promise -->
@@ -731,11 +1067,16 @@
               I HEREBY PROMISE to appear at TOMECO/City Fiscal's Office/Municipal Trial Court in Cities within 72 hours (3 days) to answer the above hereincharge(s). That failure on my part is a waiver to any preliminary investigation, if any, and to whatever criminal action that may be taken against me.
             </div>
             <div style="margin-top: 15px;">
-              <span style="margin-right: 20px;">[ ] ADMITTED</span>
-              <span>[ ] UNDER PROTEST</span>
+              <span style="margin-right: 20px;">[${ticket.admitted_or_protest === 'Admitted' || ticket.admitted_or_protest === 'ADMITTED' ? 'X' : ' '}] ADMITTED</span>
+              <span>[${ticket.admitted_or_protest === 'Under Protest' || ticket.admitted_or_protest === 'UNDER PROTEST' ? 'X' : ' '}] UNDER PROTEST</span>
             </div>
             <div style="margin-top: 30px; text-align: center;">
-              <div style="border-top: 1px solid #000; width: 300px; margin: 0 auto; padding-top: 5px;">
+              ${driverSignatureUrl ? `
+                <div style="margin: 6px 0; text-align: center;">
+                  <img src="${driverSignatureUrl}" alt="Driver Signature" style="max-width: 180px; max-height: 70px; display: block; margin: 0 auto;">
+                </div>
+              ` : ''}
+              <div style="border-top: 1px solid #000; width: 300px; margin: 0 auto; padding-top: 5px; text-align: center;">
                 <strong>(Signature of Driver)</strong>
               </div>
             </div>
@@ -751,17 +1092,17 @@
               <strong>Apprehending Officer:</strong>
               ${signatureUrl ? `
                 <div style="margin: 6px 0;">
-                  <img src="${signatureUrl}" alt="Signature" style="max-width: 180px; max-height: 70px;">
+                  <img src="${signatureUrl}" alt="Signature" style="max-width: 180px; max-height: 70px; margin: 0 auto;">
                 </div>
                 <div style="margin-top: 3px; font-size: 7px;">
-                  <u>${ticket.apprehending_officer ? ticket.apprehending_officer.toUpperCase() : '________________'}</u>
+                  ${ticket.apprehending_officer ? ticket.apprehending_officer.toUpperCase() : '________________'}
                 </div>
                 <div style="margin-top: 3px; font-size: 6px;">
                   <strong>(Signature over printed Name/Unit)</strong>
                 </div>
               ` : `
                 <div style="border-top: 1px solid #000; width: 300px; margin: 10px auto 0; padding-top: 5px;">
-                  <u>${ticket.apprehending_officer ? ticket.apprehending_officer.toUpperCase() : '________________'}</u>
+                  ${ticket.apprehending_officer ? ticket.apprehending_officer.toUpperCase() : '________________'}
                 </div>
                 <div style="margin-top: 5px; font-size: 8px;">
                   <strong>(Signature over printed Name/Unit)</strong>
@@ -769,91 +1110,13 @@
               `}
             </div>
             <div>
-              <strong>TOMECO D/ID No.</strong> <u>${ticket.tomeco_did || '________________'}</u>
+              <strong>TOMECO D/ID No.</strong> ${ticket.tomeco_did || '________________'}
             </div>
           </div>
         </div>
       `;
     }
 
-    function printTicket() {
-      @if(isset($ticket))
-      const ticket = @json($ticket);
-      const printContent = generateTicketHTML(ticket);
-      
-      // Create a new window for printing (opens in new tab, main page stays accessible)
-      const printWindow = window.open('', '_blank');
-      
-      if (!printWindow) {
-        alert('Please allow pop-ups for this site to print the ticket.');
-        return;
-      }
-      
-      printWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>Traffic Violation Receipt/Citation Ticket - ${ticket.citation_number || 'N/A'}</title>
-          <style>
-            @page {
-              size: 4in auto;
-              margin: 0.25in;
-            }
-            body {
-              font-family: Arial, sans-serif;
-              margin: 0;
-              padding: 0;
-              color: #000;
-              font-size: 9px;
-            }
-            .print-ticket {
-              width: 4in;
-              margin: 0 auto;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-            }
-            u {
-              text-decoration: underline;
-              text-decoration-thickness: 1px;
-            }
-            @media print {
-              @page {
-                size: 4in auto;
-                margin: 0.25in;
-              }
-              body {
-                margin: 0;
-                padding: 0;
-              }
-              .print-ticket {
-                page-break-inside: avoid;
-                width: 4in;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          ${printContent}
-        </body>
-        </html>
-      `);
-      printWindow.document.close();
-      
-      // Wait for images to load, then print
-      printWindow.onload = function() {
-        setTimeout(function() {
-          // Trigger print dialog
-          printWindow.print();
-          // Don't close automatically - let user close after printing
-          // This keeps the main page accessible and allows user to print again if needed
-        }, 500);
-      };
-      @else
-      alert('Ticket data not available');
-      @endif
-    }
 
     function exportToPDF(event) {
       @if(isset($ticket))
@@ -868,8 +1131,8 @@
         pdfButton.disabled = true;
       }
       
-      // PDF format: Same as print - 4in width, auto height, 0.25in margins
-      const pdfWidthIn = 4; // 4 inches width
+      // PDF format: Half width - 4.25in width, auto height, 0.25in margins
+      const pdfWidthIn = 4.25; // 4.25 inches width (half of letter size)
       const pdfMarginIn = 0.25; // 0.25 inch margins
       const pdfWidthMm = pdfWidthIn * 25.4; // Convert to mm
       const pdfMarginMm = pdfMarginIn * 25.4; // Convert to mm
@@ -885,7 +1148,7 @@
         tempDiv.style.position = 'fixed';
         tempDiv.style.left = '0';
         tempDiv.style.top = '0';
-        tempDiv.style.width = (pdfWidthIn * 96) + 'px'; // 4in at 96 DPI = 384px
+        tempDiv.style.width = (pdfWidthIn * 96) + 'px'; // 4.25in at 96 DPI = 408px
         tempDiv.style.display = 'block';
         tempDiv.style.backgroundColor = '#ffffff';
         tempDiv.style.padding = '0';
@@ -910,7 +1173,7 @@
         }
         
         // Style to match print format exactly
-        ticketElement.style.width = '4in';
+        ticketElement.style.width = '4.25in';
         ticketElement.style.margin = '0 auto';
         ticketElement.style.boxSizing = 'border-box';
         ticketElement.style.fontFamily = 'Arial, sans-serif';
@@ -1003,8 +1266,8 @@
               allowTaint: true,
               backgroundColor: '#ffffff',
               logging: false,
-              width: 384,
-              windowWidth: 384
+              width: 408, // 4.25in at 96 DPI = 408px
+              windowWidth: 408
             }).then((canvas) => {
               console.log('Canvas created:', canvas.width, 'x', canvas.height);
               
@@ -1101,7 +1364,7 @@
                 pdfButton.disabled = false;
               }
               
-              alert('Error generating PDF: ' + (error.message || 'Please try again or use Print option.'));
+              alert('Error generating PDF: ' + (error.message || 'Please try again.'));
             });
           };
           

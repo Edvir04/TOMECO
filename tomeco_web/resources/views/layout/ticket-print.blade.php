@@ -237,6 +237,9 @@
             <div>
                 <strong>TOMECO D/ID No.</strong> <u>{{ $ticket->tomeco_did ?? '________________' }}</u>
             </div>
+            <div style="margin-top: 10px; text-align: center; font-weight: bold; font-size: 9px;">
+                <strong>Amount Due: ₱{{ number_format($ticket->price ?? 1.00, 2) }}</strong>
+            </div>
         </div>
     </div>
 </body>

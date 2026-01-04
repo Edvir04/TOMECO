@@ -16,6 +16,10 @@
     .btn-danger{background:#e53935;color:#fff}
     .btn-light{background:#f3f4f6;color:#111}
     .btn-info{background:#3b82f6;color:#fff}
+    .btn-warning{background:#f59e0b;color:#fff}
+    .btn-warning:hover{background:#d97706}
+    .btn-success{background:#10b981;color:#fff}
+    .btn-success:hover{background:#059669}
     .btn-sm{padding:6px 10px;font-size:12px}
     .table-wrap{overflow:auto;border:1px solid #e5e7eb;border-radius:10px}
     table{width:100%;border-collapse:collapse;font-size:14px}
@@ -138,6 +142,25 @@
             max-height: 150px !important;
         }
     }
+
+    /* Page-specific pagination spacing */
+    nav[role="navigation"] .flex-fill,
+    nav[role="navigation"] .flex-sm-fill {
+        column-gap: 26px; /* widen gap between text and buttons */
+    }
+    nav[role="navigation"] .pagination {
+        margin-bottom: 0;
+    }
+    nav[role="navigation"] .small.text-muted {
+        margin: 0;
+    }
+    nav[role="navigation"] .flex-fill:first-child,
+    nav[role="navigation"] .flex-sm-fill:first-child {
+        flex: 0 0 auto;
+        justify-content: flex-start;
+        padding-left: 12px; /* nudge text to the right */
+        margin-right: 6px;  /* extra breathing room from pager */
+    }
 </style>
 
 <div class="container-fluid mt-4 page-wrap">
@@ -145,11 +168,25 @@
         <div class="col">
             <h2 style="margin:0;">Traffic Ticket Issuance</h2>
         </div>
-        <div class="col text-end">
-            {{-- FIX: Added id="openCreateModal" for the new JS --}}
-            <a href="{{ route('admin.ticket-issuance') }}?create=true" class="btn btn-primary" id="openCreateModal" aria-haspopup="dialog" aria-controls="createModal">
+        <div class="col text-end" style="display: flex; gap: 8px; justify-content: flex-end; align-items: center;">
+            {{-- Search Bar for Unpaid Tickets --}}
+            <input type="text" id="unpaidTicketsSearch" placeholder="Search tickets..." style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; width: 250px; font-size: 14px;">
+            {{-- For Court Action Button --}}
+            <button type="button" class="btn btn-warning" id="openCourtActionModal" aria-haspopup="dialog" aria-controls="courtActionModal" style="white-space: nowrap;">
+              For Court Action
+            </button>
+            {{-- View Paid Tickets Button --}}
+            <button type="button" class="btn btn-success" id="openPaidTicketsModal" aria-haspopup="dialog" aria-controls="paidTicketsModal" style="white-space: nowrap;">
+              View Paid Tickets
+            </button>
+            {{-- Archive Button --}}
+            <button type="button" class="btn btn-info" id="openArchiveModal" aria-haspopup="dialog" aria-controls="archiveModal" style="white-space: nowrap;">
+              Archive
+            </button>
+            {{-- Create New Ticket Button --}}
+            <button type="button" class="btn btn-primary" id="openCreateModal" aria-haspopup="dialog" aria-controls="createModal" style="white-space: nowrap;">
               + Create New Ticket
-            </a>
+            </button>
         </div>
     </div>
 
@@ -182,7 +219,7 @@
     {{-- Main content: Table of existing tickets --}}
     <div class="card table-wrap">
         <div class="card-body">
-            <table>
+            <table id="unpaidTicketsTable">
                 <thead>
                     <tr>
                         <th>Citation #</th>
@@ -191,11 +228,12 @@
                         <th>Violations</th>
                         <th>Issued Date</th>
                         <th>Officer</th>
+                        <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {{-- Loop through tickets passed from TicketController --}}
+                    {{-- Loop through unpaid tickets only (already filtered by controller) --}}
                     @forelse ($tickets as $ticket)
                         <tr>
                             <td>{{ $ticket->citation_number }}</td>
@@ -211,17 +249,23 @@
                             <td>{{ $ticket->issued_date ? $ticket->issued_date->format('M d, Y') : 'N/A' }}</td>
                             <td>{{ $ticket->apprehending_officer }}</td>
                             <td>
+                                <span style="background-color: #ef4444; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;">Unpaid</span>
+                            </td>
+                            <td>
                                 <button type="button" class="btn btn-sm btn-info view-ticket-btn" data-ticket-id="{{ $ticket->id }}" onclick="openViewModalById({{ $ticket->id }})">View</button>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center table-empty">No tickets found.</td>
+                            <td colspan="8" class="text-center table-empty">No unpaid tickets found.</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:12px;">
+        {{ $tickets->withQueryString()->links() }}
     </div>
 </div> 
 {{-- End Main Content --}}
@@ -259,7 +303,8 @@
             <div class="row mb-3 grid grid-2" style="grid-template-columns: repeat(4, 1fr); gap: 12px;">
               <div>
                 <label class="form-label">Citation / Ticket #</label>
-                <input type="text" name="citation_number" class="form-control" placeholder="e.g. 118753" value="{{ old('citation_number') }}">
+                <input type="text" name="citation_number" id="citationNumberInput" class="form-control" placeholder="Auto-generated" value="{{ old('citation_number') }}" readonly style="background-color: #f3f4f6; cursor: not-allowed;">
+                <small class="text-muted">Citation number will be automatically generated when you save the ticket.</small>
               </div>
               <div>
                 <label class="form-label">Date</label>
@@ -274,12 +319,7 @@
                 <input type="text" name="issued_by" class="form-control" value="{{ old('issued_by') }}">
               </div>
             </div>
-            <div class="row mb-3">
-                <div class="col-md-9">
-                    <label class="form-label">Place of Violation</label>
-                    <input type="text" name="place" class="form-control" placeholder="e.g. 123 Main St, Brgy. Poblacion" value="{{ old('place') }}">
-                </div>
-            </div>
+
 
             <hr style="margin: 16px 0;">
 
@@ -386,33 +426,27 @@
 
             {{-- Section 4: Violation Details --}}
             <h6 class="text-primary">Violation(s)</h6>
-            <div class="row mb-3 grid grid-2">
+            <div class="row mb-3">
                 <div>
                     <label class="form-label">Violations:</label>
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" name="violations[]" value="Speeding" id="v1" {{ in_array('Speeding', old('violations', [])) ? 'checked' : '' }}>
-                      <label class="form-check-label" for="v1">Speeding</label>
+                    <div style="position: relative;">
+                        <input type="text" id="violationSearch" class="form-control" placeholder="Click to search violations..." autocomplete="off" style="margin-bottom: 8px;">
+                        <div id="violationDropdown" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #d1d5db; border-radius: 4px; max-height: 300px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <!-- Violations will be populated here by JavaScript -->
+                        </div>
                     </div>
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" name="violations[]" value="Illegal Parking" id="v2" {{ in_array('Illegal Parking', old('violations', [])) ? 'checked' : '' }}>
-                      <label class="form-check-label" for="v2">Illegal Parking</label>
+                    <div id="selectedViolations" style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; min-height: 40px; padding: 8px; border: 1px solid #d1d5db; border-radius: 4px; background: #f9fafb;">
+                        <!-- Selected violations will appear here as tags -->
                     </div>
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" name="violations[]" value="No Helmet" id="v3" {{ in_array('No Helmet', old('violations', [])) ? 'checked' : '' }}>
-                      <label class="form-check-label" for="v3">No Helmet</label>
+                    <div id="violationsInputContainer"></div>
+                    <input type="hidden" name="price" id="priceInput" value="0.00">
+                    <div style="margin-top: 12px; padding: 12px; background: #eff6ff; border: 1px solid #3b82f6; border-radius: 4px;">
+                        <strong style="color: #1e40af;">Total Fine Amount: <span id="priceDisplay" style="color: #3b82f6; font-size: 18px;">₱0.00</span></strong>
                     </div>
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" name="violations[]" value="Disregarding Traffic Sign" id="v4" {{ in_array('Disregarding Traffic Sign', old('violations', [])) ? 'checked' : '' }}>
-                      <label class="form-check-label" for="v4">Disregarding Traffic Sign</label>
-                    </div>
-                    <div class="form-check">
-                      <input class="form-check-input" type="checkbox" name="violations[]" value="Other" id="v_other" {{ in_array('Other', old('violations', [])) ? 'checked' : '' }}>
-                      <label class="form-check-label" for="v_other">Other (Please specify below)</label>
-                    </div>
-
-                    <label class="form-label" style="margin-top: 12px;">Other Violation Text:</label>
-                    <input type="text" name="violations_others_text" class="form-control" placeholder="Specify 'Other' violation..." value="{{ old('violations_others_text') }}">
+                    <small class="text-muted">Type to search and select violations. Selected violations will appear above. Price updates automatically.</small>
                 </div>
+            </div>
+            <div class="row mb-3">
                 <div>
                     <label class="form-label">Place of Violation</label>
                     <input type="text" name="place" class="form-control" value="{{ old('place') }}">
@@ -583,7 +617,7 @@
     MODAL FOR VIEWING TICKET DETAILS
 ======================================================================
 --}}
-<div class="modal" id="viewModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle">
+<div class="modal" id="viewModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="viewModalTitle" style="z-index: 1060; background: rgba(0, 0, 0, 0.6);">
   <div class="modal-card" role="document">
     
     <div class="modal-head">
@@ -623,6 +657,215 @@
 {{-- End Image Modal --}}
 
 
+{{-- 
+======================================================================
+    MODAL FOR VIEWING PAID TICKETS
+======================================================================
+--}}
+<div class="modal" id="paidTicketsModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="paidTicketsModalTitle">
+  <div class="modal-card" role="document" style="max-width: 1200px; width: 90%;">
+    
+    <div class="modal-head">
+      <div id="paidTicketsModalTitle">Paid Tickets</div>
+      <button class="btn btn-light" id="closePaidTicketsModal" aria-label="Close paid tickets dialog" style="padding: 6px 8px;">✖</button>
+    </div>
+
+    <div class="modal-body">
+      {{-- Search Bar for Paid Tickets --}}
+      <div style="margin-bottom: 16px;">
+        <input type="text" id="paidTicketsSearch" placeholder="Search paid tickets..." style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; width: 100%; max-width: 400px; font-size: 14px;">
+      </div>
+      <div class="table-wrap">
+        <table id="paidTicketsTable">
+          <thead>
+            <tr>
+              <th>Citation #</th>
+              <th>Driver Name</th>
+              <th>Plate #</th>
+              <th>Violations</th>
+              <th>Issued Date</th>
+              <th>Paid Date</th>
+              <th>Officer</th>
+              <th>Amount</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @forelse ($paidTickets ?? [] as $ticket)
+              <tr>
+                <td>{{ $ticket->citation_number }}</td>
+                <td>{{ $ticket->driver_firstname }} {{ $ticket->driver_lastname }}</td>
+                <td>{{ $ticket->plate_number }}</td>
+                <td>
+                  {{ $ticket->violations ? implode(', ', $ticket->violations) : 'N/A' }}
+                  @if($ticket->violations_others_text)
+                    (Other: {{ $ticket->violations_others_text }})
+                  @endif
+                </td>
+                <td>{{ $ticket->issued_date ? $ticket->issued_date->format('M d, Y') : 'N/A' }}</td>
+                <td>{{ $ticket->paid_at ? $ticket->paid_at->format('M d, Y') : 'N/A' }}</td>
+                <td>{{ $ticket->apprehending_officer }}</td>
+                <td>₱{{ number_format($ticket->price ?? 0, 2) }}</td>
+                <td>
+                  <button type="button" class="btn btn-sm btn-info view-ticket-btn" data-ticket-id="{{ $ticket->id }}" onclick="openViewModalById({{ $ticket->id }})">View</button>
+                </td>
+              </tr>
+            @empty
+              <tr>
+                <td colspan="9" class="text-center table-empty">No paid tickets found.</td>
+              </tr>
+            @endforelse
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{{-- End Paid Tickets Modal --}}
+
+{{-- Archive Modal --}}
+<div class="modal" id="archiveModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="archiveModalTitle">
+  <div class="modal-card" role="document" style="max-width: 1200px; width: 90%;">
+    
+    <div class="modal-head">
+      <div id="archiveModalTitle">Archived Tickets</div>
+      <button class="btn btn-light" id="closeArchiveModal" aria-label="Close archived tickets dialog" style="padding: 6px 8px;">✖</button>
+    </div>
+
+    <div class="modal-body">
+      {{-- Search Bar for Archived Tickets --}}
+      <div style="margin-bottom: 16px;">
+        <input type="text" id="archivedTicketsSearch" placeholder="Search archived tickets..." style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; width: 100%; max-width: 400px; font-size: 14px;">
+      </div>
+      <div class="table-wrap">
+        <table id="archivedTicketsTable">
+          <thead>
+            <tr>
+              <th>Citation #</th>
+              <th>Driver Name</th>
+              <th>Plate #</th>
+              <th>Violations</th>
+              <th>Issued Date</th>
+              <th>Paid Date</th>
+              <th>Officer</th>
+              <th>Amount</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @forelse ($archivedTickets ?? [] as $ticket)
+              <tr>
+                <td>{{ $ticket->citation_number }}</td>
+                <td>{{ $ticket->driver_firstname }} {{ $ticket->driver_lastname }}</td>
+                <td>{{ $ticket->plate_number }}</td>
+                <td>
+                  {{ $ticket->violations ? implode(', ', $ticket->violations) : 'N/A' }}
+                  @if($ticket->violations_others_text)
+                    (Other: {{ $ticket->violations_others_text }})
+                  @endif
+                </td>
+                <td>{{ $ticket->issued_date ? $ticket->issued_date->format('M d, Y') : 'N/A' }}</td>
+                <td>{{ $ticket->paid_at ? $ticket->paid_at->format('M d, Y') : 'N/A' }}</td>
+                <td>{{ $ticket->apprehending_officer }}</td>
+                <td>₱{{ number_format($ticket->price ?? 0, 2) }}</td>
+                <td>
+                  <button type="button" class="btn btn-sm btn-info view-ticket-btn" data-ticket-id="{{ $ticket->id }}" onclick="openViewModalById({{ $ticket->id }})">View</button>
+                </td>
+              </tr>
+            @empty
+              <tr>
+                <td colspan="9" class="text-center table-empty">No archived tickets found.</td>
+              </tr>
+            @endforelse
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div id="archivedTicketsPagination" style="display:flex;justify-content:flex-end;margin-top:12px;">
+    {{ ($archivedTickets ?? collect())->withQueryString()->links() }}
+  </div>
+</div>
+{{-- End Archive Modal --}}
+
+{{-- For Court Action Modal --}}
+<div class="modal" id="courtActionModal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="courtActionModalTitle">
+  <div class="modal-card" role="document" style="max-width: 1200px; width: 90%;">
+    
+    <div class="modal-head">
+      <div id="courtActionModalTitle">For Court Action</div>
+      <button class="btn btn-light" id="closeCourtActionModal" aria-label="Close court action tickets dialog" style="padding: 6px 8px;">✖</button>
+    </div>
+
+    <div class="modal-body">
+      {{-- Search and Date Range Filters for Court Action Tickets --}}
+      <div style="margin-bottom: 16px; display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+        <input type="text" id="courtActionTicketsSearch" placeholder="Search court action tickets..." style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; width: 100%; max-width: 300px; font-size: 14px;">
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <label style="font-size: 13px; font-weight: 600; color: #6b7280; white-space: nowrap;">From:</label>
+          <input type="date" id="courtActionDateFrom" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <label style="font-size: 13px; font-weight: 600; color: #6b7280; white-space: nowrap;">To:</label>
+          <input type="date" id="courtActionDateTo" style="padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+        </div>
+        <button type="button" id="courtActionClearFilters" class="btn btn-light" style="padding: 8px 12px; font-size: 14px;">Clear Filters</button>
+      </div>
+      <div class="table-wrap">
+        <table id="courtActionTicketsTable">
+          <thead>
+            <tr>
+              <th>Citation #</th>
+              <th>Driver Name</th>
+              <th>Plate #</th>
+              <th>Violations</th>
+              <th>Issued Date</th>
+              <th>Officer</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            @forelse ($courtActionTickets ?? [] as $ticket)
+              <tr data-issued-date="{{ $ticket->issued_date ? $ticket->issued_date->format('Y-m-d') : ($ticket->created_at ? $ticket->created_at->format('Y-m-d') : '') }}">
+                <td>{{ $ticket->citation_number }}</td>
+                <td>{{ $ticket->driver_firstname }} {{ $ticket->driver_lastname }}</td>
+                <td>{{ $ticket->plate_number }}</td>
+                <td>
+                  {{ $ticket->violations ? implode(', ', $ticket->violations) : 'N/A' }}
+                  @if($ticket->violations_others_text)
+                    (Other: {{ $ticket->violations_others_text }})
+                  @endif
+                </td>
+                <td>{{ $ticket->issued_date ? $ticket->issued_date->format('M d, Y') : 'N/A' }}</td>
+                <td>{{ $ticket->apprehending_officer }}</td>
+                <td>₱{{ number_format($ticket->price ?? 0, 2) }}</td>
+                <td>
+                  <select class="court-action-status" data-ticket-id="{{ $ticket->id }}" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; background: white; min-width: 120px; transition: all 0.2s;">
+                    <option value="Pending" {{ ($ticket->court_action_status ?? 'Pending') === 'Pending' ? 'selected' : '' }}>Pending</option>
+                    <option value="Processing" {{ ($ticket->court_action_status ?? 'Pending') === 'Processing' ? 'selected' : '' }}>Processing</option>
+                    <option value="Completed" {{ ($ticket->court_action_status ?? 'Pending') === 'Completed' ? 'selected' : '' }}>Completed</option>
+                  </select>
+                </td>
+                <td>
+                  <button type="button" class="btn btn-sm btn-info view-ticket-btn" data-ticket-id="{{ $ticket->id }}" onclick="openViewModalById({{ $ticket->id }})">View</button>
+                </td>
+              </tr>
+            @empty
+              <tr>
+                <td colspan="9" class="text-center table-empty">No tickets for court action found.</td>
+              </tr>
+            @endforelse
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{{-- End For Court Action Modal --}}
+
+
  
 <script>
     // Flash fade
@@ -635,16 +878,217 @@
         }, 2000);
     })();
 
-    // Modal controls with better centering + accessibility
-    const modal = document.getElementById('createModal');
-    const openBtn = document.getElementById('openCreateModal');
-    const closeBtn = document.getElementById('closeCreateModal');
-    const cancelBtn = document.getElementById('cancelCreate');
+    // Violations dropdown functionality with prices
+    // New violations from checklist appear first
+    // Load violations from database (newest first)
+    const violations = @json($violations ?? []);
+    const violationsArray = violations.map(v => v.name);
     
-    // FIX: Updated the selector to find the first input in *this* form
+    // Build violation prices object from database
+    const violationPrices = {};
+    violations.forEach(v => {
+        violationPrices[v.name] = parseFloat(v.price) || 500.00;
+    });
+
+    let selectedViolations = [];
+    let violationSearch, violationDropdown, selectedViolationsContainer, violationsInput;
+    
+    // Initialize violation elements when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        violationSearch = document.getElementById('violationSearch');
+        violationDropdown = document.getElementById('violationDropdown');
+        selectedViolationsContainer = document.getElementById('selectedViolations');
+        violationsInputContainer = document.getElementById('violationsInputContainer');
+        
+        // Ensure selectedViolations is always an array
+        if (!Array.isArray(selectedViolations)) {
+            selectedViolations = [];
+        }
+        
+        // Initialize violation search if elements exist
+        if (violationSearch && violationDropdown) {
+            initializeViolationSearch();
+        }
+    });
+
+    function updateViolationsInput() {
+        if (!Array.isArray(selectedViolations)) {
+            selectedViolations = [];
+        }
+        // Remove existing violation inputs
+        const existingInputs = document.querySelectorAll('input[name="violations[]"]');
+        existingInputs.forEach(input => input.remove());
+        
+        // Create new inputs for each selected violation
+        if (violationsInputContainer) {
+            selectedViolations.forEach(violation => {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'violations[]';
+                input.value = violation;
+                violationsInputContainer.appendChild(input);
+            });
+        }
+    }
+
+    function renderSelectedViolations() {
+        if (!selectedViolationsContainer) return;
+        if (!Array.isArray(selectedViolations)) {
+            selectedViolations = [];
+        }
+        selectedViolationsContainer.innerHTML = '';
+        if (selectedViolations.length === 0) {
+            selectedViolationsContainer.innerHTML = '<span style="color: #9ca3af; font-size: 13px;">No violations selected</span>';
+            // Update price display when no violations
+            updatePriceDisplay();
+            return;
+        }
+        selectedViolations.forEach((violation, index) => {
+            const tag = document.createElement('span');
+            tag.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; background: #3b82f6; color: white; padding: 4px 10px; border-radius: 16px; font-size: 12px; margin: 2px;';
+            tag.innerHTML = `
+                <span>${violation}</span>
+                <button type="button" onclick="removeViolation(${index})" style="background: rgba(255,255,255,0.3); border: none; color: white; border-radius: 50%; width: 18px; height: 18px; cursor: pointer; font-size: 12px; line-height: 1; padding: 0;">×</button>
+            `;
+            selectedViolationsContainer.appendChild(tag);
+        });
+        // Update price display after rendering violations
+        updatePriceDisplay();
+    }
+
+    function calculateTotalPrice() {
+        let total = 0;
+        if (!Array.isArray(selectedViolations)) {
+            selectedViolations = [];
+        }
+        selectedViolations.forEach(violation => {
+            total += violationPrices[violation] || 0;
+        });
+        return total;
+    }
+
+    function updatePriceDisplay() {
+        try {
+            if (!Array.isArray(selectedViolations)) {
+                selectedViolations = [];
+            }
+            const totalPrice = calculateTotalPrice();
+            const priceDisplay = document.getElementById('priceDisplay');
+            if (priceDisplay) {
+                priceDisplay.textContent = `₱${totalPrice.toFixed(2)}`;
+            } else {
+                console.warn('priceDisplay element not found');
+            }
+            // Also update hidden input for form submission
+            const priceInput = document.getElementById('priceInput');
+            if (priceInput) {
+                priceInput.value = totalPrice.toFixed(2);
+            } else {
+                console.warn('priceInput element not found');
+            }
+        } catch (error) {
+            console.error('Error updating price display:', error);
+        }
+    }
+
+    window.removeViolation = function(index) {
+        selectedViolations.splice(index, 1);
+        renderSelectedViolations();
+        updateViolationsInput();
+        updatePriceDisplay();
+    };
+
+    function filterViolations(searchTerm) {
+        if (!searchTerm) {
+            return violationsArray;
+        }
+        const term = searchTerm.toLowerCase();
+        return violationsArray.filter(v => v.toLowerCase().includes(term));
+    }
+
+    function renderDropdown(filteredViolations) {
+        violationDropdown.innerHTML = '';
+        if (filteredViolations.length === 0) {
+            violationDropdown.innerHTML = '<div style="padding: 12px; color: #9ca3af; text-align: center;">No violations found</div>';
+            return;
+        }
+        filteredViolations.forEach(violation => {
+            const isSelected = selectedViolations.includes(violation);
+            const item = document.createElement('div');
+            item.style.cssText = `padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f3f4f6; ${isSelected ? 'background: #eff6ff; color: #3b82f6;' : ''}`;
+            item.textContent = violation;
+            if (isSelected) {
+                item.innerHTML = violation + ' <span style="color: #10b981; font-weight: bold;">✓</span>';
+            }
+            item.addEventListener('click', () => {
+                if (!isSelected) {
+                    selectedViolations.push(violation);
+                    renderSelectedViolations();
+                    updateViolationsInput();
+                    updatePriceDisplay();
+                    violationSearch.value = '';
+                    violationDropdown.style.display = 'none';
+                }
+            });
+            item.addEventListener('mouseenter', () => {
+                if (!isSelected) item.style.background = '#f9fafb';
+            });
+            item.addEventListener('mouseleave', () => {
+                if (!isSelected) item.style.background = 'white';
+            });
+            violationDropdown.appendChild(item);
+        });
+    }
+
+    function initializeViolationSearch() {
+        if (!violationSearch || !violationDropdown) return;
+        
+        violationSearch.addEventListener('input', (e) => {
+            const searchTerm = e.target.value;
+            const filtered = filterViolations(searchTerm);
+            renderDropdown(filtered);
+            violationDropdown.style.display = searchTerm ? 'block' : 'none';
+        });
+
+        violationSearch.addEventListener('focus', () => {
+            // Show all violations when search bar is clicked/focused
+            const searchTerm = violationSearch.value || '';
+            const filtered = filterViolations(searchTerm);
+            renderDropdown(filtered);
+            violationDropdown.style.display = 'block';
+        });
+        
+        violationSearch.addEventListener('click', () => {
+            // Show all violations when search bar is clicked
+            const searchTerm = violationSearch.value || '';
+            const filtered = filterViolations(searchTerm);
+            renderDropdown(filtered);
+            violationDropdown.style.display = 'block';
+        });
+
+        document.addEventListener('click', (e) => {
+            if (violationSearch && violationDropdown && !violationSearch.contains(e.target) && !violationDropdown.contains(e.target)) {
+                violationDropdown.style.display = 'none';
+            }
+        });
+    }
+
+    // Initialize selected violations from old input if editing
+    @if(old('violations'))
+        const oldViolations = @json(old('violations', []));
+        selectedViolations = Array.isArray(oldViolations) ? oldViolations : [];
+        renderSelectedViolations();
+        updateViolationsInput();
+        updatePriceDisplay();
+    @endif
+
+    // Modal controls with better centering + accessibility
+    // Wait for DOM to be ready before accessing elements
+    let modal, openBtn, closeBtn, cancelBtn;
     const firstInputSelector = 'input[name="citation_number"]';
 
-    function openModal(isEdit = false){
+    // Make functions globally accessible
+    window.openModal = function(isEdit = false){
         // Hide loading indicator when opening modal
         const loadingIndicator = document.getElementById('imageLoadingIndicator');
         if (loadingIndicator) loadingIndicator.style.display = 'none';
@@ -673,47 +1117,91 @@
             if (typeof updateExistingImagesInput === 'function') {
                 updateExistingImagesInput();
             }
-            // Stop camera if running
+            // Stop camera if running and reset camera mode
             if (typeof cameraStream !== 'undefined' && cameraStream) {
                 stopCamera();
             }
-            // Reset to upload mode
+            // Reset to upload mode when opening modal
             if (typeof switchToUploadMode === 'function') {
                 switchToUploadMode();
             }
             // Clear signatures
             clearSignature();
             clearDriverSignature();
+            // Clear citation number field (will be auto-generated on save)
+            const citationInput = document.getElementById('citationNumberInput');
+            if (citationInput) {
+                citationInput.value = '';
+                // Make it read-only for create mode
+                citationInput.setAttribute('readonly', 'readonly');
+                citationInput.style.backgroundColor = '#f3f4f6';
+                citationInput.style.cursor = 'not-allowed';
+                // Update the help text
+                const helpText = citationInput.parentElement.querySelector('small.text-muted');
+                if (helpText) {
+                    helpText.textContent = 'Citation number will be automatically generated when you save the ticket.';
+                }
+            }
+            // Clear violations
+            selectedViolations = [];
+            renderSelectedViolations();
+            updateViolationsInput();
+            // Price display will be updated by renderSelectedViolations
         }
         
-        modal.classList.add('open');
-        modal.setAttribute('aria-hidden','false');
-        document.body.style.overflow='hidden';
-        // focus the first form control (small delay to ensure visible)
-        setTimeout(()=>{
-            const first = modal.querySelector(firstInputSelector);
-            if(first) first.focus();
-            // Re-initialize signature pad after modal opens
-            initSignaturePad();
-        }, 50);
-        // save currently focused element to restore later
-        openModal._previousActive = document.activeElement;
-        // simple focus trap (tab cycling inside modal)
-        document.addEventListener('keydown', handleKeydown);
-    }
+        if (!modal) {
+            modal = document.getElementById('createModal');
+        }
+        if (modal) {
+            modal.classList.add('open');
+            modal.setAttribute('aria-hidden','false');
+            document.body.style.overflow='hidden';
+            // focus the first form control (small delay to ensure visible)
+            setTimeout(()=>{
+                const first = modal.querySelector(firstInputSelector);
+                if(first) first.focus();
+                // Re-initialize signature pad after modal opens
+                initSignaturePad();
+                // Initialize price display when modal opens
+                updatePriceDisplay();
+            }, 50);
+            // save currently focused element to restore later
+            window.openModal._previousActive = document.activeElement;
+            // simple focus trap (tab cycling inside modal)
+            document.addEventListener('keydown', handleKeydown);
+        }
+    };
 
-    function closeModal(){
-        modal.classList.remove('open');
-        modal.setAttribute('aria-hidden','true');
-        document.body.style.overflow='';
-        // restore focus
-        if(openModal._previousActive) openModal._previousActive.focus();
-        document.removeEventListener('keydown', handleKeydown);
-    }
+    window.closeModal = function(){
+        // Stop camera if running when closing modal
+        if (typeof cameraStream !== 'undefined' && cameraStream) {
+            stopCamera();
+        }
+        // Reset to upload mode when closing modal
+        if (typeof switchToUploadMode === 'function') {
+            switchToUploadMode();
+        }
+        
+        if (!modal) {
+            modal = document.getElementById('createModal');
+        }
+        if (modal) {
+            modal.classList.remove('open');
+            modal.setAttribute('aria-hidden','true');
+            document.body.style.overflow='';
+            // restore focus
+            if(window.openModal && window.openModal._previousActive) window.openModal._previousActive.focus();
+            document.removeEventListener('keydown', handleKeydown);
+        }
+    };
 
     function handleKeydown(e){
-        if(e.key === 'Escape') { closeModal(); return; }
+        if(e.key === 'Escape') { if(window.closeModal) window.closeModal(); return; }
         if(e.key === 'Tab'){
+            if (!modal) {
+                modal = document.getElementById('createModal');
+            }
+            if (!modal) return;
             // keep focus inside modal
             const focusable = Array.from(modal.querySelectorAll('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled])'))
                 .filter(el => el.offsetParent !== null);
@@ -724,13 +1212,495 @@
         }
     }
 
-    openBtn?.addEventListener('click', (e) => {
-        e.preventDefault(); // Stop the <a> tag from navigating
-        openModal(false); // false = create mode
+    // Initialize modal controls when DOM is ready
+    document.addEventListener('DOMContentLoaded', function() {
+        modal = document.getElementById('createModal');
+        openBtn = document.getElementById('openCreateModal');
+        closeBtn = document.getElementById('closeCreateModal');
+        cancelBtn = document.getElementById('cancelCreate');
+        
+        console.log('Modal initialization:', { modal: !!modal, openBtn: !!openBtn, closeBtn: !!closeBtn, cancelBtn: !!cancelBtn });
+        console.log('Functions available:', { openModal: typeof window.openModal, closeModal: typeof window.closeModal });
+        
+        if (openBtn) {
+            openBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('Create button clicked');
+                if (window.openModal) {
+                    window.openModal(false); // false = create mode
+                } else {
+                    console.error('openModal function not found');
+                    alert('Error: Modal function not available. Please refresh the page.');
+                }
+            });
+        } else {
+            console.error('Create button (openCreateModal) not found in DOM');
+        }
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (window.closeModal) {
+                    window.closeModal();
+                }
+            });
+        }
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (window.closeModal) {
+                    window.closeModal();
+                }
+            });
+        }
+        if (modal) {
+            modal.addEventListener('click', (e)=>{ 
+                if(e.target === modal && window.closeModal) {
+                    window.closeModal();
+                }
+            });
+        }
+        
+        // Paid Tickets Modal handlers
+        const paidTicketsModal = document.getElementById('paidTicketsModal');
+        const openPaidTicketsBtn = document.getElementById('openPaidTicketsModal');
+        const closePaidTicketsBtn = document.getElementById('closePaidTicketsModal');
+        
+        // Function to open paid tickets modal
+        function openPaidTicketsModal() {
+            if (paidTicketsModal) {
+                // Automatically check and archive tickets that have been paid for 10+ days
+                fetch('{{ route("admin.tickets.auto-archive") }}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 
+                                     document.querySelector('input[name="_token"]')?.value || ''
+                    },
+                    credentials: 'same-origin'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.archived_count > 0) {
+                        // If tickets were archived, reload the page with modal parameter to keep it open
+                        const url = new URL(window.location);
+                        url.searchParams.set('modal', 'paid');
+                        window.location.href = url.toString();
+                    } else {
+                        // Open modal normally if no tickets were archived
+                        paidTicketsModal.classList.add('open');
+                        paidTicketsModal.setAttribute('aria-hidden', 'false');
+                        document.body.style.overflow = 'hidden';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error auto-archiving tickets:', error);
+                    // Open modal anyway even if archiving check fails
+                    paidTicketsModal.classList.add('open');
+                    paidTicketsModal.setAttribute('aria-hidden', 'false');
+                    document.body.style.overflow = 'hidden';
+                });
+            }
+        }
+        
+        // Function to close paid tickets modal
+        function closePaidTicketsModal() {
+            if (paidTicketsModal) {
+                paidTicketsModal.classList.remove('open');
+                paidTicketsModal.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+                // Remove modal parameter from URL when closing
+                const url = new URL(window.location);
+                url.searchParams.delete('modal');
+                window.history.replaceState({}, '', url);
+            }
+        }
+        
+        if (openPaidTicketsBtn) {
+            openPaidTicketsBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openPaidTicketsModal();
+            });
+        }
+        
+        if (closePaidTicketsBtn) {
+            closePaidTicketsBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                closePaidTicketsModal();
+            });
+        }
+        
+        if (paidTicketsModal) {
+            paidTicketsModal.addEventListener('click', (e) => {
+                if (e.target === paidTicketsModal) {
+                    closePaidTicketsModal();
+                }
+            });
+        }
+        
+        // Archive Modal handlers
+        const archiveModal = document.getElementById('archiveModal');
+        const openArchiveBtn = document.getElementById('openArchiveModal');
+        const closeArchiveBtn = document.getElementById('closeArchiveModal');
+        
+        // Function to open archive modal
+        function openArchiveModal() {
+            if (archiveModal) {
+                archiveModal.classList.add('open');
+                archiveModal.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+        
+        // Function to close archive modal
+        function closeArchiveModal() {
+            if (archiveModal) {
+                archiveModal.classList.remove('open');
+                archiveModal.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+                // Remove modal parameter from URL when closing
+                const url = new URL(window.location);
+                url.searchParams.delete('modal');
+                window.history.replaceState({}, '', url);
+            }
+        }
+        
+        if (openArchiveBtn) {
+            openArchiveBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openArchiveModal();
+            });
+        }
+        
+        if (closeArchiveBtn) {
+            closeArchiveBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                closeArchiveModal();
+            });
+        }
+        
+        if (archiveModal) {
+            archiveModal.addEventListener('click', (e) => {
+                if (e.target === archiveModal) {
+                    closeArchiveModal();
+                }
+            });
+        }
+
+        // Intercept pagination clicks in archive modal to preserve modal state
+        const archivedTicketsPaginationContainer = document.getElementById('archivedTicketsPagination');
+        if (archivedTicketsPaginationContainer) {
+            archivedTicketsPaginationContainer.addEventListener('click', function(e) {
+                const link = e.target.closest('a');
+                if (link && link.href) {
+                    // Only intercept if the link has archived_page parameter
+                    const hasArchivedPage = link.href.includes('archived_page=') || 
+                                          (link.href.includes('?') && link.href.split('?')[1].includes('archived_page'));
+                    
+                    if (hasArchivedPage) {
+                        e.preventDefault();
+                        try {
+                            const url = new URL(link.href, window.location.origin);
+                            url.searchParams.set('modal', 'archive');
+                            window.location.href = url.toString();
+                        } catch (err) {
+                            // If URL parsing fails, append modal parameter
+                            const separator = link.href.includes('?') ? '&' : '?';
+                            window.location.href = link.href + separator + 'modal=archive';
+                        }
+                    }
+                }
+            });
+        }
+
+        // Search functionality for archived tickets
+        const archivedTicketsSearch = document.getElementById('archivedTicketsSearch');
+        if (archivedTicketsSearch) {
+            archivedTicketsSearch.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                const table = document.getElementById('archivedTicketsTable');
+                if (table) {
+                    const rows = table.querySelectorAll('tbody tr');
+                    rows.forEach(row => {
+                        const text = row.textContent.toLowerCase();
+                        row.style.display = text.includes(searchTerm) ? '' : 'none';
+                    });
+                }
+            });
+        }
+
+        // Court Action Modal handlers
+        const courtActionModal = document.getElementById('courtActionModal');
+        const openCourtActionBtn = document.getElementById('openCourtActionModal');
+        const closeCourtActionBtn = document.getElementById('closeCourtActionModal');
+        
+        // Function to open court action modal
+        function openCourtActionModal() {
+            if (courtActionModal) {
+                courtActionModal.classList.add('open');
+                courtActionModal.setAttribute('aria-hidden', 'false');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+        
+        // Function to close court action modal
+        function closeCourtActionModal() {
+            if (courtActionModal) {
+                courtActionModal.classList.remove('open');
+                courtActionModal.setAttribute('aria-hidden', 'true');
+                document.body.style.overflow = '';
+                // Remove modal parameter from URL when closing
+                const url = new URL(window.location);
+                url.searchParams.delete('modal');
+                window.history.replaceState({}, '', url);
+            }
+        }
+        
+        if (openCourtActionBtn) {
+            openCourtActionBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openCourtActionModal();
+            });
+        }
+        
+        if (closeCourtActionBtn) {
+            closeCourtActionBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                closeCourtActionModal();
+            });
+        }
+        
+        if (courtActionModal) {
+            courtActionModal.addEventListener('click', (e) => {
+                if (e.target === courtActionModal) {
+                    closeCourtActionModal();
+                }
+            });
+        }
+        
+        // Search functionality for unpaid tickets
+        const unpaidTicketsSearch = document.getElementById('unpaidTicketsSearch');
+        const unpaidTicketsTable = document.getElementById('unpaidTicketsTable');
+        
+        if (unpaidTicketsSearch && unpaidTicketsTable) {
+            unpaidTicketsSearch.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase().trim();
+                const rows = unpaidTicketsTable.querySelectorAll('tbody tr');
+                
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    if (text.includes(searchTerm)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // Search functionality for paid tickets
+        const paidTicketsSearch = document.getElementById('paidTicketsSearch');
+        const paidTicketsTable = document.getElementById('paidTicketsTable');
+        
+        if (paidTicketsSearch && paidTicketsTable) {
+            paidTicketsSearch.addEventListener('input', function(e) {
+                const searchTerm = e.target.value.toLowerCase().trim();
+                const rows = paidTicketsTable.querySelectorAll('tbody tr');
+                
+                rows.forEach(row => {
+                    const text = row.textContent.toLowerCase();
+                    if (text.includes(searchTerm)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+            });
+        }
+
+        // Combined filter function for court action tickets (search + date range)
+        function filterCourtActionTickets() {
+            const courtActionTicketsTable = document.getElementById('courtActionTicketsTable');
+            const courtActionTicketsSearch = document.getElementById('courtActionTicketsSearch');
+            const courtActionDateFrom = document.getElementById('courtActionDateFrom');
+            const courtActionDateTo = document.getElementById('courtActionDateTo');
+            
+            if (!courtActionTicketsTable) return;
+            
+            const searchTerm = courtActionTicketsSearch ? courtActionTicketsSearch.value.toLowerCase().trim() : '';
+            const dateFrom = courtActionDateFrom ? courtActionDateFrom.value : '';
+            const dateTo = courtActionDateTo ? courtActionDateTo.value : '';
+            
+            const rows = courtActionTicketsTable.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                let showRow = true;
+                
+                // Text search filter
+                if (searchTerm) {
+                    const text = row.textContent.toLowerCase();
+                    if (!text.includes(searchTerm)) {
+                        showRow = false;
+                    }
+                }
+                
+                // Date range filter
+                if (showRow && (dateFrom || dateTo)) {
+                    const issuedDate = row.getAttribute('data-issued-date');
+                    if (issuedDate) {
+                        if (dateFrom && issuedDate < dateFrom) {
+                            showRow = false;
+                        }
+                        if (dateTo && issuedDate > dateTo) {
+                            showRow = false;
+                        }
+                    } else {
+                        // If no date, hide row if date filter is active
+                        if (dateFrom || dateTo) {
+                            showRow = false;
+                        }
+                    }
+                }
+                
+                row.style.display = showRow ? '' : 'none';
+            });
+        }
+        
+        // Search functionality for court action tickets
+        const courtActionTicketsSearch = document.getElementById('courtActionTicketsSearch');
+        const courtActionDateFrom = document.getElementById('courtActionDateFrom');
+        const courtActionDateTo = document.getElementById('courtActionDateTo');
+        const courtActionClearFilters = document.getElementById('courtActionClearFilters');
+        
+        if (courtActionTicketsSearch) {
+            courtActionTicketsSearch.addEventListener('input', filterCourtActionTickets);
+        }
+        
+        if (courtActionDateFrom) {
+            courtActionDateFrom.addEventListener('change', filterCourtActionTickets);
+        }
+        
+        if (courtActionDateTo) {
+            courtActionDateTo.addEventListener('change', filterCourtActionTickets);
+        }
+        
+        if (courtActionClearFilters) {
+            courtActionClearFilters.addEventListener('click', function() {
+                if (courtActionTicketsSearch) courtActionTicketsSearch.value = '';
+                if (courtActionDateFrom) courtActionDateFrom.value = '';
+                if (courtActionDateTo) courtActionDateTo.value = '';
+                filterCourtActionTickets();
+            });
+        }
+
+        // Function to update status dropdown style based on status value
+        function updateStatusStyle(selectElement, status) {
+            // Reset styles
+            selectElement.style.borderColor = '#d1d5db';
+            selectElement.style.color = '#111';
+            selectElement.style.background = 'white';
+            
+            // Apply status-specific styles
+            switch(status) {
+                case 'Pending':
+                    selectElement.style.borderColor = '#f59e0b';
+                    selectElement.style.color = '#92400e';
+                    selectElement.style.background = '#fef3c7';
+                    break;
+                case 'Processing':
+                    selectElement.style.borderColor = '#3b82f6';
+                    selectElement.style.color = '#1e40af';
+                    selectElement.style.background = '#dbeafe';
+                    break;
+                case 'Completed':
+                    selectElement.style.borderColor = '#10b981';
+                    selectElement.style.color = '#065f46';
+                    selectElement.style.background = '#d1fae5';
+                    break;
+            }
+        }
+
+        // Initialize status styles on page load
+        const statusSelects = document.querySelectorAll('.court-action-status');
+        statusSelects.forEach(select => {
+            updateStatusStyle(select, select.value);
+        });
+
+        // Handle court action status updates
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('court-action-status')) {
+                const ticketId = e.target.getAttribute('data-ticket-id');
+                const newStatus = e.target.value;
+                
+                if (ticketId && newStatus) {
+                    // Update visual style based on status
+                    updateStatusStyle(e.target, newStatus);
+                    
+                    // Show loading state
+                    e.target.disabled = true;
+                    e.target.style.opacity = '0.6';
+                    const originalValue = e.target.value;
+                    
+                    // Send AJAX request to update status
+                    fetch(`/admin/tickets/${ticketId}/update-court-action-status`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                        },
+                        body: JSON.stringify({
+                            court_action_status: newStatus
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        e.target.disabled = false;
+                        e.target.style.opacity = '1';
+                        if (data.success) {
+                            // Update style based on new status
+                            updateStatusStyle(e.target, newStatus);
+                        } else {
+                            // Revert on error
+                            e.target.value = originalValue;
+                            updateStatusStyle(e.target, originalValue);
+                            alert('Failed to update status. Please try again.');
+                        }
+                    })
+                    .catch(error => {
+                        e.target.disabled = false;
+                        e.target.style.opacity = '1';
+                        e.target.value = originalValue;
+                        updateStatusStyle(e.target, originalValue);
+                        console.error('Error:', error);
+                        alert('An error occurred while updating the status.');
+                    });
+                }
+            }
+        });
+
+        // Auto-open modal based on URL parameter (for pagination)
+        const urlParams = new URLSearchParams(window.location.search);
+        const modalParam = urlParams.get('modal');
+        if (modalParam === 'paid') {
+            // Small delay to ensure DOM is ready, then auto-archive and open modal
+            setTimeout(() => {
+                openPaidTicketsModal();
+            }, 100);
+        } else if (modalParam === 'court_action') {
+            // Small delay to ensure DOM is ready
+            setTimeout(() => {
+                openCourtActionModal();
+            }, 100);
+        } else if (modalParam === 'archive') {
+            // Small delay to ensure DOM is ready
+            setTimeout(() => {
+                openArchiveModal();
+            }, 100);
+        }
     });
-    closeBtn?.addEventListener('click', closeModal);
-    cancelBtn?.addEventListener('click', closeModal);
-    modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
 
     // Image Preview functionality for multiple images
     let existingImagesMeta = []; // [{ url, path }]
@@ -1097,6 +2067,8 @@
         video.srcObject = null;
         video.style.display = 'none';
         startBtn.style.display = 'block';
+        startBtn.disabled = false; // Re-enable the button
+        startBtn.textContent = 'Start Camera'; // Reset button text
         controls.style.display = 'none';
     }
 
@@ -1154,15 +2126,32 @@
     let signatureCanvas, signatureCtx, isDrawing = false;
     let lastX = 0, lastY = 0;
 
+    function resizeSignatureCanvas() {
+        if (!signatureCanvas || !signatureCtx) return;
+        const dataURL = signatureCanvas.toDataURL();
+        const newWidth = signatureCanvas.clientWidth || 600;
+        const newHeight = signatureCanvas.height;
+        signatureCanvas.width = newWidth;
+        signatureCanvas.height = newHeight;
+        signatureCtx.strokeStyle = '#000000';
+        signatureCtx.lineWidth = 2;
+        signatureCtx.lineCap = 'round';
+        signatureCtx.lineJoin = 'round';
+        if (dataURL) {
+            const img = new Image();
+            img.onload = function() {
+                signatureCtx.drawImage(img, 0, 0, signatureCanvas.width, signatureCanvas.height);
+            };
+            img.src = dataURL;
+        }
+    }
+
     function initSignaturePad() {
         signatureCanvas = document.getElementById('signatureCanvas');
         if (!signatureCanvas) return;
         
         signatureCtx = signatureCanvas.getContext('2d');
-        signatureCtx.strokeStyle = '#000000';
-        signatureCtx.lineWidth = 2;
-        signatureCtx.lineCap = 'round';
-        signatureCtx.lineJoin = 'round';
+        resizeSignatureCanvas();
 
         // Mouse events
         signatureCanvas.addEventListener('mousedown', startDrawing);
@@ -1170,10 +2159,12 @@
         signatureCanvas.addEventListener('mouseup', stopDrawing);
         signatureCanvas.addEventListener('mouseout', stopDrawing);
 
-        // Touch events for mobile
-        signatureCanvas.addEventListener('touchstart', handleTouch);
-        signatureCanvas.addEventListener('touchmove', handleTouch);
-        signatureCanvas.addEventListener('touchend', stopDrawing);
+        // Touch events for mobile (passive: false so preventDefault works)
+        signatureCanvas.addEventListener('touchstart', handleTouch, { passive: false });
+        signatureCanvas.addEventListener('touchmove', handleTouch, { passive: false });
+        signatureCanvas.addEventListener('touchend', stopDrawing, { passive: false });
+
+        window.addEventListener('resize', resizeSignatureCanvas);
     }
 
     function startDrawing(e) {
@@ -1228,10 +2219,25 @@
         }
     }
 
+    // Export a canvas with a white background to avoid transparent/black fill in viewers
+    function exportCanvasWithBg(canvas, ctx, format = 'image/png') {
+        if (!canvas || !ctx) return null;
+        const temp = document.createElement('canvas');
+        temp.width = canvas.width;
+        temp.height = canvas.height;
+        const tctx = temp.getContext('2d');
+        tctx.fillStyle = '#FFFFFF';
+        tctx.fillRect(0, 0, temp.width, temp.height);
+        tctx.drawImage(canvas, 0, 0);
+        return temp.toDataURL(format);
+    }
+
     function saveSignature() {
-        if (signatureCanvas) {
-            const dataURL = signatureCanvas.toDataURL('image/png');
-            document.getElementById('signatureInput').value = dataURL;
+        if (signatureCanvas && signatureCtx) {
+            const dataURL = exportCanvasWithBg(signatureCanvas, signatureCtx, 'image/png');
+            if (dataURL) {
+                document.getElementById('signatureInput').value = dataURL;
+            }
         }
     }
 
@@ -1240,15 +2246,32 @@
     let driverSignatureCtx = null;
     let isDriverDrawing = false;
 
+    function resizeDriverSignatureCanvas() {
+        if (!driverSignatureCanvas || !driverSignatureCtx) return;
+        const dataURL = driverSignatureCanvas.toDataURL();
+        const newWidth = driverSignatureCanvas.clientWidth || 600;
+        const newHeight = driverSignatureCanvas.height;
+        driverSignatureCanvas.width = newWidth;
+        driverSignatureCanvas.height = newHeight;
+        driverSignatureCtx.strokeStyle = '#000';
+        driverSignatureCtx.lineWidth = 2;
+        driverSignatureCtx.lineCap = 'round';
+        driverSignatureCtx.lineJoin = 'round';
+        if (dataURL) {
+            const img = new Image();
+            img.onload = function() {
+                driverSignatureCtx.drawImage(img, 0, 0, driverSignatureCanvas.width, driverSignatureCanvas.height);
+            };
+            img.src = dataURL;
+        }
+    }
+
     function initDriverSignaturePad() {
         driverSignatureCanvas = document.getElementById('driverSignatureCanvas');
         if (!driverSignatureCanvas) return;
         
         driverSignatureCtx = driverSignatureCanvas.getContext('2d');
-        driverSignatureCtx.strokeStyle = '#000';
-        driverSignatureCtx.lineWidth = 2;
-        driverSignatureCtx.lineCap = 'round';
-        driverSignatureCtx.lineJoin = 'round';
+        resizeDriverSignatureCanvas();
 
         // Mouse events
         driverSignatureCanvas.addEventListener('mousedown', startDriverDrawing);
@@ -1256,10 +2279,12 @@
         driverSignatureCanvas.addEventListener('mouseup', stopDriverDrawing);
         driverSignatureCanvas.addEventListener('mouseout', stopDriverDrawing);
 
-        // Touch events
-        driverSignatureCanvas.addEventListener('touchstart', handleDriverTouch);
-        driverSignatureCanvas.addEventListener('touchmove', handleDriverTouch);
-        driverSignatureCanvas.addEventListener('touchend', stopDriverDrawing);
+        // Touch events (passive: false so preventDefault works)
+        driverSignatureCanvas.addEventListener('touchstart', handleDriverTouch, { passive: false });
+        driverSignatureCanvas.addEventListener('touchmove', handleDriverTouch, { passive: false });
+        driverSignatureCanvas.addEventListener('touchend', stopDriverDrawing, { passive: false });
+
+        window.addEventListener('resize', resizeDriverSignatureCanvas);
     }
 
     function startDriverDrawing(e) {
@@ -1307,9 +2332,11 @@
     }
 
     function saveDriverSignature() {
-        if (driverSignatureCanvas) {
-            const dataURL = driverSignatureCanvas.toDataURL('image/png');
-            document.getElementById('driverSignatureInput').value = dataURL;
+        if (driverSignatureCanvas && driverSignatureCtx) {
+            const dataURL = exportCanvasWithBg(driverSignatureCanvas, driverSignatureCtx, 'image/png');
+            if (dataURL) {
+                document.getElementById('driverSignatureInput').value = dataURL;
+            }
         }
     }
 
@@ -1402,14 +2429,34 @@
         }
         viewModal.classList.add('open');
         viewModal.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
+        // Don't change body overflow - let the paid tickets modal handle it if it's open
+        // This allows the view modal to overlap the paid tickets modal
     }
 
     function closeViewModal() {
         viewModal.classList.remove('open');
         viewModal.setAttribute('aria-hidden', 'true');
-        document.body.style.overflow = '';
+        // Only restore body overflow if paid tickets modal is not open
+        const paidTicketsModal = document.getElementById('paidTicketsModal');
+        if (!paidTicketsModal || !paidTicketsModal.classList.contains('open')) {
+            document.body.style.overflow = '';
+        }
         viewModalBody.innerHTML = '<div style="text-align: center; padding: 40px;"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div><p style="margin-top: 12px; color: #6b7280;">Loading ticket details...</p></div>';
+        // Restore original modal header
+        const modalHead = document.querySelector('#viewModal .modal-head');
+        if (modalHead) {
+            modalHead.innerHTML = `
+                <div id="viewModalTitle">Ticket Details</div>
+                <button class="btn btn-light" id="closeViewModal" aria-label="Close view ticket dialog" style="padding: 6px 8px;">✖</button>
+            `;
+            // Re-attach close button event
+            setTimeout(() => {
+                const closeBtn = document.getElementById('closeViewModal');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', closeViewModal);
+                }
+            }, 10);
+        }
         currentTicketId = null;
         currentTicketData = null;
     }
@@ -1418,9 +2465,20 @@
     document.addEventListener('DOMContentLoaded', function() {
         initViewModal();
     });
+    
+    // Function to re-initialize view modal close button after header update
+    function reinitViewModalClose() {
+        const closeBtn = document.getElementById('closeViewModal');
+        if (closeBtn) {
+            // Remove existing listeners by cloning and replacing
+            const newCloseBtn = closeBtn.cloneNode(true);
+            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+            newCloseBtn.addEventListener('click', closeViewModal);
+        }
+    }
 
     // Function to open view modal by ticket ID (called from onclick)
-    async function openViewModalById(ticketId) {
+    window.openViewModalById = async function(ticketId) {
         if (!ticketId) {
             console.error('No ticket ID provided');
             return;
@@ -1488,12 +2546,70 @@
         }
     });
 
+    // Normalize signature data (supports raw base64 or data URLs; trims whitespace)
+    function normalizeSignatureData(value) {
+        if (!value) return null;
+        const trimmed = String(value).trim();
+        // Already a data URL
+        if (trimmed.startsWith('data:')) {
+            // Normalize whitespace inside data URL (especially from mobile)
+            const parts = trimmed.split(',');
+            if (parts.length >= 2) {
+                const header = parts[0];
+                const base64Body = parts.slice(1).join(',').replace(/\s+/g, '');
+                return `${header},${base64Body}`;
+            }
+            return trimmed.replace(/\s+/g, '');
+        }
+        // Remove whitespace and check if looks like base64
+        const compact = trimmed.replace(/\s+/g, '');
+        const isBase64 = /^[A-Za-z0-9+/=]+$/.test(compact) && compact.length > 20;
+        if (isBase64) {
+            // Detect JPEG magic (/9j/) vs default PNG
+            const jpegLike = compact.startsWith('/9j/');
+            return `data:image/${jpegLike ? 'jpeg' : 'png'};base64,${compact}`;
+        }
+        // Fallback: treat as storage path and prefix /storage
+        const normalizedPath = trimmed.replace(/^\/+/, '');
+        if (normalizedPath && !normalizedPath.startsWith('http')) {
+            return `${window.location.origin}/storage/${normalizedPath.startsWith('storage/') ? normalizedPath.slice(8) : normalizedPath}`;
+        }
+        return compact;
+    }
+
     function displayTicketDetails(ticket) {
         const violations = ticket.violations ? ticket.violations.join(', ') : 'N/A';
         const violationsDisplay = violations + (ticket.violations_others_text ? ` (Other: ${ticket.violations_others_text})` : '');
         
         const issuedDate = ticket.issued_date ? new Date(ticket.issued_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A';
         const courtDate = ticket.court_date ? new Date(ticket.court_date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A';
+        
+        // Update modal header to include Print, Edit, Delete buttons
+        const modalHead = document.querySelector('#viewModal .modal-head');
+        if (modalHead) {
+            modalHead.innerHTML = `
+                <div id="viewModalTitle">Ticket Details</div>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <button type="button" class="btn btn-sm btn-light" onclick="printTicket(${ticket.id})" style="padding: 6px 12px; display: inline-flex; align-items: center; gap: 6px;">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"></path>
+                            <path d="M6 14h12v8H6z"></path>
+                        </svg>
+                        Print
+                    </button>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="confirmDeleteTicket(${ticket.id})" style="padding: 6px 12px;">Delete</button>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="openEditModal(${ticket.id})" style="padding: 6px 12px;">Edit</button>
+                    <button class="btn btn-light" id="closeViewModal" aria-label="Close view ticket dialog" style="padding: 6px 8px;">✖</button>
+                </div>
+            `;
+            // Re-attach close button event after a brief delay to ensure DOM is updated
+            setTimeout(() => {
+                const closeBtn = document.getElementById('closeViewModal');
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', closeViewModal);
+                }
+            }, 10);
+        }
         
         viewModalBody.innerHTML = `
             <div class="container-fluid">
@@ -1554,6 +2670,20 @@
                         <p style="margin: 4px 0 0 0; font-size: 14px;">${ticket.driver_contact || 'N/A'}</p>
                     </div>
                 </div>
+                <div class="row mb-3" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; color: #6b7280;">DL Type</label>
+                        <p style="margin: 4px 0 0 0; font-size: 14px;">${ticket.dl_type || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; color: #6b7280;">Admitted / Under Protest</label>
+                        <p style="margin: 4px 0 0 0; font-size: 14px;">${ticket.admitted_or_protest || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; color: #6b7280;">Accident Involved</label>
+                        <p style="margin: 4px 0 0 0; font-size: 14px;">${ticket.accident === true ? 'Yes' : (ticket.accident === false ? 'No' : 'N/A')}</p>
+                    </div>
+                </div>
 
                 <hr style="margin: 16px 0;">
 
@@ -1588,6 +2718,20 @@
                     <div>
                         <label style="font-weight: 600; font-size: 13px; color: #6b7280;">Owner's Address</label>
                         <p style="margin: 4px 0 0 0; font-size: 14px;">${ticket.owner_address || 'N/A'}</p>
+                    </div>
+                </div>
+                <div class="row mb-3" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; color: #6b7280;">Vehicle Type</label>
+                        <p style="margin: 4px 0 0 0; font-size: 14px;">${ticket.vehicle_type || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; color: #6b7280;">OR Number</label>
+                        <p style="margin: 4px 0 0 0; font-size: 14px;">${ticket.or_number || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; color: #6b7280;">CR Number</label>
+                        <p style="margin: 4px 0 0 0; font-size: 14px;">${ticket.cr_number || 'N/A'}</p>
                     </div>
                 </div>
 
@@ -1666,6 +2810,22 @@
                         <p style="margin: 4px 0 0 0; font-size: 14px;">${ticket.tomeco_did || 'N/A'}</p>
                     </div>
                 </div>
+                <div class="row mb-3" style="margin-top: 12px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; color: #6b7280;">Payment Status</label>
+                        <p style="margin: 4px 0 0 0; font-size: 14px;">
+                            ${ticket.status === 'Paid' 
+                                ? '<span style="background-color: #10b981; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;">Paid</span>' 
+                                : '<span style="background-color: #ef4444; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500;">Unpaid</span>'}
+                        </p>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; color: #6b7280;">Ticket Price</label>
+                        <p style="margin: 4px 0 0 0; font-size: 14px; font-weight: 600; color: #111;">
+                            ₱${parseFloat(ticket.price || 1.00).toFixed(2)}
+                        </p>
+                    </div>
+                </div>
 
                 ${ticket.signature ? `
                 <hr style="margin: 16px 0;">
@@ -1674,26 +2834,34 @@
                     <div>
                         <label style="font-weight: 600; font-size: 13px; color: #6b7280;">Officer Signature</label>
                         <div style="border: 2px solid #d1d5db; border-radius: 8px; background: #fff; padding: 12px; margin-top: 8px;">
-                            <img src="${ticket.signature}" alt="Signature" style="max-width: 100%; max-height: 200px; border: 1px solid #e5e7eb; border-radius: 4px;">
+                            <img src="${normalizeSignatureData(ticket.signature) || ''}" alt="Signature" style="max-width: 100%; max-height: 200px; border: 1px solid #e5e7eb; border-radius: 4px;">
                         </div>
                     </div>
                 </div>
                 ` : ''}
-            </div>
-            <div style="display:flex;justify-content:space-between;gap:8px;margin-top:20px; border-top: 1px solid #eee; padding-top: 16px;">
-                <div>
-                    <button type="button" class="btn btn-danger" onclick="confirmDeleteTicket(${ticket.id})">Delete</button>
+                
+                ${ticket.driver_signature ? `
+                <div class="row mb-3" style="margin-top: 4px;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; color: #6b7280;">Driver Signature</label>
+                        <div style="border: 2px solid #d1d5db; border-radius: 8px; background: #fff; padding: 12px; margin-top: 8px;">
+                            <img src="${normalizeSignatureData(ticket.driver_signature) || ''}" alt="Driver Signature" style="max-width: 100%; max-height: 200px; border: 1px solid #e5e7eb; border-radius: 4px;">
+                        </div>
+                    </div>
                 </div>
-                <div style="display:flex;gap:8px;">
-                    <button type="button" class="btn btn-light" onclick="printTicket(${ticket.id})" style="display: inline-flex; align-items: center; gap: 6px;">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                            <path d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"></path>
-                            <path d="M6 14h12v8H6z"></path>
-                        </svg>
-                        Print
-                    </button>
-                    <button type="button" class="btn btn-light" onclick="closeViewModal()">Close</button>
-                    <button type="button" class="btn btn-primary" onclick="openEditModal(${ticket.id})">Edit</button>
+                ` : ''}
+
+                <hr style="margin: 16px 0;">
+                <h6 class="text-primary">Record Info</h6>
+                <div class="row mb-3" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; color: #6b7280;">Created At</label>
+                        <p style="margin: 4px 0 0 0; font-size: 14px;">${ticket.created_at ? new Date(ticket.created_at).toLocaleString() : 'N/A'}</p>
+                    </div>
+                    <div>
+                        <label style="font-weight: 600; font-size: 13px; color: #6b7280;">Updated At</label>
+                        <p style="margin: 4px 0 0 0; font-size: 14px;">${ticket.updated_at ? new Date(ticket.updated_at).toLocaleString() : 'N/A'}</p>
+                    </div>
                 </div>
             </div>
         `;
@@ -1731,7 +2899,19 @@
                 }
                 
                 // Populate form fields
-                document.querySelector('input[name="citation_number"]').value = ticket.citation_number || '';
+                const citationInput = document.getElementById('citationNumberInput') || document.querySelector('input[name="citation_number"]');
+                if (citationInput) {
+                    citationInput.value = ticket.citation_number || '';
+                    // Make citation number editable when editing
+                    citationInput.removeAttribute('readonly');
+                    citationInput.style.backgroundColor = '';
+                    citationInput.style.cursor = '';
+                    // Update the help text
+                    const helpText = citationInput.parentElement.querySelector('small.text-muted');
+                    if (helpText) {
+                        helpText.textContent = 'Citation number can be edited.';
+                    }
+                }
                 document.querySelector('input[name="issued_date"]').value = ticket.issued_date ? ticket.issued_date.split('T')[0] : '';
                 document.querySelector('input[name="issued_time"]').value = formatTime(ticket.issued_time);
                 document.querySelector('input[name="issued_by"]').value = ticket.issued_by || '';
@@ -1778,20 +2958,12 @@
                     }
                 }
                 
-                // Handle violations checkboxes
+                // Populate violations dropdown
                 const violations = ticket.violations || [];
-                document.querySelectorAll('input[name="violations[]"]').forEach(checkbox => {
-                    checkbox.checked = violations.includes(checkbox.value);
-                });
-                
-                // If there's violations_others_text, ensure "Other" checkbox is checked
-                const otherCheckbox = document.querySelector('input[name="violations[]"][value="Other"]');
-                const othersText = ticket.violations_others_text || '';
-                if (othersText && otherCheckbox) {
-                    otherCheckbox.checked = true;
-                }
-                
-                document.querySelector('input[name="violations_others_text"]').value = othersText;
+                selectedViolations = Array.isArray(violations) ? violations : [];
+                renderSelectedViolations();
+                updateViolationsInput();
+                updatePriceDisplay();
                 
                 document.querySelector('textarea[name="incident_notes"]').value = ticket.incident_notes || '';
                 document.querySelector('textarea[name="remarks"]').value = ticket.remarks || '';
@@ -1804,7 +2976,7 @@
                 // Load officer signature if exists
                 if (ticket.signature) {
                     const signatureInput = document.getElementById('signatureInput');
-                    signatureInput.value = ticket.signature;
+                    signatureInput.value = normalizeSignatureData(ticket.signature) || '';
                     // Draw signature on canvas
                     const img = new Image();
                     img.onload = function() {
@@ -1813,7 +2985,7 @@
                             signatureCtx.drawImage(img, 0, 0, signatureCanvas.width, signatureCanvas.height);
                         }
                     };
-                    img.src = ticket.signature;
+                    img.src = normalizeSignatureData(ticket.signature) || '';
                 } else {
                     clearSignature();
                 }
@@ -1821,7 +2993,7 @@
                 // Load driver signature if exists
                 if (ticket.driver_signature) {
                     const driverSignatureInput = document.getElementById('driverSignatureInput');
-                    driverSignatureInput.value = ticket.driver_signature;
+                    driverSignatureInput.value = normalizeSignatureData(ticket.driver_signature) || '';
                     // Draw driver signature on canvas
                     const driverImg = new Image();
                     driverImg.onload = function() {
@@ -1830,7 +3002,7 @@
                             driverSignatureCtx.drawImage(driverImg, 0, 0, driverSignatureCanvas.width, driverSignatureCanvas.height);
                         }
                     };
-                    driverImg.src = ticket.driver_signature;
+                    driverImg.src = normalizeSignatureData(ticket.driver_signature) || '';
                 } else {
                     clearDriverSignature();
                 }
@@ -1943,7 +3115,7 @@
     // If there are validation errors from server and page reloaded,
     // automatically open modal so users can see the errors.
     @if ($errors->any())
-        setTimeout(()=>{ openModal(); }, 80);
+        setTimeout(()=>{ if(window.openModal) window.openModal(); }, 80);
     @endif
 </script>
 @endsection

@@ -6,16 +6,21 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Pagination\LengthAwarePaginator;
 use App\Models\Superadmin;
 use App\Models\Admin;
 use App\Models\TomecoEnforcer;
 
 class AccountsController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         // Get current user's role
         $currentRole = $this->getCurrentUserRole();
+        
+        // Get search and filter parameters
+        $search = $request->get('search', '');
+        $roleFilter = $request->get('role', '');
         
         $supers = Superadmin::select(
             'id','fullname','username','id_number','gender','dob','contact_number','address','profile_picture','created_at'
@@ -29,11 +34,46 @@ class AccountsController extends Controller
             'id','fullname','username','id_number','gender','dob','contact_number','address','profile_picture','created_at'
         )->get()->map(fn($u) => $this->row($u, 'enforcer'));
 
-        $accounts = $supers->concat($admins)->concat($enforcers)
-            ->sortByDesc('created_at')
-            ->values();
+        $allAccounts = $supers->concat($admins)->concat($enforcers);
 
-        return view('layout.accounts', compact('accounts', 'currentRole'));
+        // Apply role filter
+        if (!empty($roleFilter)) {
+            $allAccounts = $allAccounts->filter(function($account) use ($roleFilter) {
+                return $account['role'] === $roleFilter;
+            });
+        }
+
+        // Apply search filter
+        if (!empty($search)) {
+            $searchLower = strtolower($search);
+            $allAccounts = $allAccounts->filter(function($account) use ($searchLower) {
+                return str_contains(strtolower($account['fullname'] ?? ''), $searchLower) ||
+                       str_contains(strtolower($account['username'] ?? ''), $searchLower) ||
+                       str_contains(strtolower($account['id_number'] ?? ''), $searchLower) ||
+                       str_contains(strtolower($account['contact_number'] ?? ''), $searchLower) ||
+                       str_contains(strtolower($account['address'] ?? ''), $searchLower);
+            });
+        }
+
+        $allAccounts = $allAccounts->sortByDesc('created_at')->values();
+
+        // Paginate manually because data is merged from multiple models
+        $perPage = 10;
+        $page = LengthAwarePaginator::resolveCurrentPage();
+        $currentItems = $allAccounts->forPage($page, $perPage)->values();
+
+        $accounts = new LengthAwarePaginator(
+            $currentItems,
+            $allAccounts->count(),
+            $perPage,
+            $page,
+            [
+                'path' => request()->url(),
+                'query' => request()->query(),
+            ]
+        );
+
+        return view('layout.accounts', compact('accounts', 'currentRole', 'search', 'roleFilter'));
     }
     
     private function getCurrentUserRole()
@@ -103,6 +143,12 @@ class AccountsController extends Controller
 
     public function update(Request $request, string $role, int $id)
     {
+        $currentRole = $this->getCurrentUserRole();
+        // Admin can only update enforcers; superadmin can update all
+        if ($currentRole === 'admin' && $role !== 'enforcer') {
+            return back()->withErrors(['role' => 'You do not have permission to edit this account.']);
+        }
+
         $request->validate([
             'fullname'        => ['required','string','max:255'],
             'username'        => ['required','string','max:255'],
@@ -148,6 +194,12 @@ class AccountsController extends Controller
 
     public function destroy(string $role, int $id)
     {
+        $currentRole = $this->getCurrentUserRole();
+        // Admins can only delete enforcer accounts; superadmin can delete all
+        if ($currentRole === 'admin' && $role !== 'enforcer') {
+            return back()->withErrors(['message' => 'You do not have permission to delete this account.']);
+        }
+
         $user = $this->find($role, $id);
         $user->delete();
 
