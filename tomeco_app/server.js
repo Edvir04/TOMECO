@@ -339,20 +339,9 @@ app.post('/api/mobile/ocr/scan-id', upload.single('image'), async (req, res) => 
     console.log('Processing OCR for file:', uploadedFilePath);
 
     // Get Python OCR service URL
-    // Use localhost since both services run on the same machine via PM2
-    // Temporarily disabled for Render deployment
-    const PYTHON_OCR_HOST = process.env.PYTHON_OCR_HOST || null; // Temporarily disabled
+    // Use environment variable from Render or default to localhost for local development
+    const PYTHON_OCR_HOST = process.env.PYTHON_OCR_HOST || 'localhost';
     const PYTHON_OCR_PORT = process.env.PYTHON_OCR_PORT || '5000';
-    
-    // Check if OCR service is available
-    if (!PYTHON_OCR_HOST) {
-      return res.status(503).json({
-        success: false,
-        message: 'OCR service is temporarily unavailable. Please use manual input.',
-        error: 'OCR service not configured'
-      });
-    }
-    
     const pythonOCRUrl = `http://${PYTHON_OCR_HOST}:${PYTHON_OCR_PORT}/ocr/scan-id`;
 
     console.log('Sending image to Python OCR service:', pythonOCRUrl);
