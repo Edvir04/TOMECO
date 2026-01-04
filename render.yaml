@@ -119,5 +119,5 @@ databases:
   - name: tomeco-db
     plan: free
     databaseName: capstone_gigs
-    user: postgres
+    user: tomeco_user
 
