@@ -30,19 +30,24 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Copy composer files first for better caching
 COPY composer.json composer.lock ./
 
-# Create minimal .env file for composer scripts (needed for package:discover)
-RUN echo "APP_KEY=" > .env && \
-    echo "APP_ENV=production" >> .env && \
-    echo "APP_DEBUG=false" >> .env
-
-# Install PHP dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+# Install PHP dependencies without scripts first
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
 # Copy application files
 COPY . .
 
-# Run composer autoload optimization
-RUN composer dump-autoload --optimize
+# Create minimal .env file if it doesn't exist
+RUN if [ ! -f .env ]; then \
+    echo "APP_KEY=" > .env && \
+    echo "APP_ENV=production" >> .env && \
+    echo "APP_DEBUG=false" >> .env && \
+    echo "DB_CONNECTION=sqlite" >> .env && \
+    echo "DB_DATABASE=:memory:" >> .env; \
+    fi
+
+# Run composer autoload and package discovery
+RUN composer dump-autoload --optimize && \
+    php artisan package:discover --ansi || echo "Package discovery skipped"
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html \
